@@ -1,0 +1,265 @@
+-- TODO:
+
+-- Add entities for logging message/comment data, so that we can have edit
+-- histories.
+
+-- Add logging entities for likes.
+
+-- Figure out if it's better for like entities to be separated to be specific
+-- to comments or posts, or to be consolidated into a single Like entity with
+-- NULLable fields referring either to a CommentId or PostId, as it is now.
+
+--------------------------------------------------------------------------------
+
+------------------------------------USER INFO-----------------------------------
+
+--------------------------------------------------------------------------------
+--#User
+
+User json
+    ident Text -- For Auth through Yesod
+
+    name Text
+    password Text
+
+    createdAt UTCTime
+    updatedAt UTCTime Maybe -- Allowed fields: ident.
+
+    UniqueUser ident
+
+    deriving Typeable Read Eq Show
+--------------------------------------------------------------------------------
+--#Profile ; data: Gender
+
+-- | This is what the old User entity used to be, but it now references the new
+-- User table, which stores the unique identifying information for that person.
+
+Profile json
+    user UserId
+
+    firstName Text
+    lastName Text
+
+    dateOfBirth Day
+    gender Gender -- See Model/Persistent -> Gender
+
+    -- lastLogin UTCTime -- not sure if I should implement
+
+    createdAt UTCTime
+    updatedAt UTCTime Maybe -- Allowed fields: ALL BUT user.
+
+    UniqueProfileUser user -- This makes it easy to fetch all profile info with a
+      -- UserId. We can easily get that Id with maybeAuthId
+
+    deriving Read Eq Show
+
+--------------------------------------------------------------------------------
+--#ProfileLog ; data: UserUpdate
+
+-- | Prevents data loss from meaningful changes to the Profile entity. Currently
+-- omits logging of LogIns and LogOuts, as that seems a bit overboard;
+-- however it may be worth discussing the potential value of such a feature.
+--
+-- Every log action here is an UPDATE.
+
+ProfileLog
+    user UserId
+
+    action ProfileUpdate -- UpdateFirstName, UpdateLastName, UpdateEmail,
+      -- UpdateDateOfBirth, UpdateGender.
+    previousValue Text -- all values are converted to text so that we don't
+      -- have to use multiple fields to satisfy differing data types.
+
+    createdAt UTCTime -- These logs are recorded at the same time a change
+      -- is made. Hence, this is the timestamp of the change.
+
+--------------------------------------------------------------------------------
+--#ProfileOptions
+
+-- | One example of options would be a user's display preferences for their
+-- profile in terms of what personal information they want to show on their
+-- wall.
+
+-- Leaving this un-implemented for now, while I wait to figure out how to best
+-- structure this model.
+
+--------------------------------------------------------------------------------
+--#Friendship
+
+Friendship json
+    firstUser UserId -- This *must always* be the user who *sent* the friend
+      -- request
+    secondUser UserId
+
+    becameFriends UTCTime Maybe -- if NULL, the first user sent a request, and
+      -- the second never accepted.
+
+    whoDefriended UserId Maybe -- if this field is NOT NULL, the Friendship is
+      -- deactivated, but we do not delete it.
+
+    createdAt UTCTime
+    updatedAt UTCTime Maybe -- Allowed fields: becameFriends, whoDefriended.
+
+    UniqueFriendship firstUser secondUser -- in queries we might need to also
+      -- search for UniqueFriendship secondUser firstUser as well, to ensure
+      -- that we find the relationship. Just a reminder in case behavior is
+      -- ever buggy in this table.
+
+--------------------------------------------------------------------------------
+--#FriendshipLog ; data: FriendshipAction
+
+-- | The idea with this is to make sure that we have a full history of any
+-- Friendship-level actions.
+-- Logging will only occur when a field in Friendship is overwritten.
+
+FriendshipLog
+    friendship FriendshipId
+    user UserId -- who performed the action
+
+    action FriendshipAction -- SendRequest, AcceptRequest, or Defriend.
+    timestamp UTCTime
+
+    createdAt UTCTime -- When the log was recorded is distinct from when
+      -- the action was made (the 'timestamp'). These values should never be
+      -- identical, as logs are not made at the same time actions are taken.
+
+--------------------------------------------------------------------------------
+
+----------------------------------CONVERSATIONS---------------------------------
+
+--------------------------------------------------------------------------------
+--#ConversationUser
+
+-- | Points a User to a Conversation. When created the isActive field will be
+-- true, indicating that they will receive updates to the conversation and it
+-- will remain visible to them.
+
+ConversationUser json
+    conversation ConversationId
+    user UserId
+
+    isActive Bool -- This field determines if the user will have the
+      -- conversation displayed in their messages tab within the App.
+      -- See documentation for more information on how this field is used.
+
+    createdAt UTCTime
+    updatedAt UTCTime Maybe -- Allowed fields: isActive.
+      -- If this field is not null, and isActive is false, the user de-activated
+      -- the conversation at this time; if isActive is true, then the user at
+      -- one point de-activated the conversation, and re-activated it at this
+      -- time.
+
+    UniqueConversationUser conversation user -- only 1 user per conversation
+
+--------------------------------------------------------------------------------
+--#ConversationMessage
+
+-- | A single conversation contains 1 or more messages. This table contains
+-- each message, along with the Conversation it points to.
+
+ConversationMessage json
+    conversation ConversationId
+    content Text
+    author UserId
+
+    createdAt UTCTime
+    updatedAt UTCTime Maybe -- Allowed fields: message(?).
+        -- non-null entries in this field will indicate the time the last edit
+        -- was made to a message (supposing we allow edits)
+
+--------------------------------------------------------------------------------
+--#Conversation
+
+-- | The entries for this table are sparse. That's because it will be used in
+-- SQL Joins to link between the ConversationUsers and ConversationMessages.
+-- See the documentation for more information.
+
+Conversation json
+    createdAt UTCTime -- conversations will be created when a user first sends a
+      -- ConversationMessage to one or more users.
+    updatedAt UTCTime Maybe
+      -- this field will be updated every time a new message is posted to the
+      -- conversation.
+      -- Depending on how well this works, we may want to get rid of this field
+      -- entirely and get this information solely from the most recent
+      -- ConversationMessage entity.
+
+--------------------------------------------------------------------------------
+
+--------------------------------NEWS FEED / WALLS-------------------------------
+
+--------------------------------------------------------------------------------
+--#Like
+
+Like json
+    liker UserId
+
+    -- The following does not seem to be the most elegant solution to the
+    -- problem of connecting a Like to either a Post or a PostComment.
+
+    -- RULE: A Like can refer to EITHER a Post or a PostComment. Hence, one of
+    -- these fields must remain NULL.
+    post WallPostId Maybe
+    comment PostCommentId Maybe
+
+    createdAt UTCTime
+
+--------------------------------------------------------------------------------
+--#PostComment
+
+-- | I know this sounds like an action but it is not; it should be read as a
+-- noun, not a verb. This table references Post Comments to an actual WallPost
+-- (identified by the WallPost table). This is a many-to-one relationship.
+
+-- Currently lacks support for Media types.
+
+PostComment json
+    post WallPostId
+    content Text
+    author UserId
+
+    likeCount Int
+
+    -- Unimplemented but we may want to allow for nested comments.
+    --nestedUnder PostCommentId Maybe -- Used only if this comment is nested
+      -- under another comment, rather than being a top-level comment to the
+      -- Post itself.
+
+    createdAt UTCTime
+    updatedAt UTCTime Maybe -- Allowed fields: content(?).
+
+--------------------------------------------------------------------------------
+--#WallPost
+
+-- Not named "Post" in order to avoid name-conflicts with the HTTP POST method.
+-- Currently lacks support for Media types.
+
+WallPost json
+    author UserId
+    content Text
+
+    commentCount Int
+    likeCount Int
+
+    createdAt UTCTime
+    updatedAt UTCTime Maybe -- Allowed fields: content(?).
+
+--------------------------------------------------------------------------------
+
+--------------------------------------MEDIA-------------------------------------
+
+--------------------------------------------------------------------------------
+--#Image
+
+Image
+    content ByteString
+    title Text Maybe -- "Untitled" if NULL
+    uploadedBy UserId
+
+--------------------------------------------------------------------------------
+--#Video
+
+Video
+    content ByteString
+    title Text Maybe -- "Untitled" if NULL
+    uploadedBy UserId
