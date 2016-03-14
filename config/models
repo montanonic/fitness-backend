@@ -19,8 +19,12 @@
 User json
     ident Text -- For Auth through Yesod
 
-    name Text
+    firstName Text
+    lastName Text
+
     password Text
+
+    dateOfBirth Day
 
     createdAt UTCTime
     updatedAt UTCTime Maybe -- Allowed fields: ident.
@@ -40,7 +44,6 @@ Profile json
     firstName Text
     lastName Text
 
-    dateOfBirth Day
     gender Gender -- See Model/Persistent -> Gender
 
     -- lastLogin UTCTime -- not sure if I should implement
@@ -48,7 +51,7 @@ Profile json
     createdAt UTCTime
     updatedAt UTCTime Maybe -- Allowed fields: ALL BUT user.
 
-    UniqueProfileUser user -- This makes it easy to fetch all profile info with a
+    UniqueProfile user -- This makes it easy to fetch all profile info with a
       -- UserId. We can easily get that Id with maybeAuthId
 
     deriving Read Eq Show

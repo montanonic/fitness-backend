@@ -5,3 +5,9 @@
 /robots.txt RobotsR GET
 
 / HomeR GET
+
+-- User
+/user         NewUserR POST
+/user/#UserId UserR GET PUT DELETE -- User creation happens at authentication.
+
+/user/#UserId/profile ProfileR GET PUT

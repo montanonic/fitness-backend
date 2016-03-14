@@ -17,6 +17,8 @@ library
                      Foundation
                      Handler.Common
                      Handler.Home
+                     Handler.User
+                     Handler.Profile
                      Import
                      Import.NoFoundation
                      Model
@@ -100,6 +102,11 @@ test-suite test
     main-is:           Spec.hs
     hs-source-dirs:    test
     ghc-options:       -Wall
+
+    other-modules: Handler.CommonSpec
+                   Handler.ProfileSpec
+                   Handler.UserSpec
+                   TestImport
 
     extensions: TemplateHaskell
                 QuasiQuotes
