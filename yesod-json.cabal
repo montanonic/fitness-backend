@@ -86,6 +86,8 @@ library
                  , time
                  , case-insensitive
                  , wai
+                 , serversession
+                 , serversession-backend-persistent
 
 executable         yesod-json
     if flag(library-only)

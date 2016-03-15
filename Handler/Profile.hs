@@ -8,7 +8,15 @@ getProfileR userId = runDB $ getBy404 (UniqueProfile userId) >>= returnJson
 putProfileR :: UserId -> Handler Value
 putProfileR userId = do
     profile <- requireJsonBody :: Handler Profile
-    runDB $ do
-        key <- entityKey <$> getBy404 (UniqueProfile userId)
-        replace key profile
-    sendResponseStatus status200 ("CREATED/UPDATED" :: Text)
+    mkey <- runDB $
+        (map entityKey) <$> getBy (UniqueProfile userId)
+    -- does a profile for this user already exist?
+    case mkey of
+        -- if not, make one using the request body
+        Nothing -> do
+            runDB $ insert_ profile
+            sendResponseCreated (ProfileR userId)
+        -- otherwise, replace the profile with the req body, updating it
+        Just profileId -> do
+            runDB $ replace profileId profile
+            sendResponse ("UPDATED" :: Text)

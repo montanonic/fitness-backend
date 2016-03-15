@@ -11,5 +11,8 @@ import Model.Persistent
 -- You can find more information on persistent and how to declare entities
 -- at:
 -- http://www.yesodweb.com/book/persistent/
-share [mkPersist sqlSettings, mkMigrate "migrateAll"]
+
+-- Rationale for the changes made, here:
+-- http://haddock.stackage.org/lts-5.8/serversession-backend-persistent-1.0.2/Web-ServerSession-Backend-Persistent.html
+share [mkPersist sqlSettings, mkSave "entityDefs"]
     $(persistFileWith lowerCaseSettings "config/models")

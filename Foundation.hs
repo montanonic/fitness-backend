@@ -4,7 +4,7 @@ import Import.NoFoundation
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
 import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
-import Yesod.Auth.OpenId    (authOpenId, IdentifierType (Claimed))
+import Yesod.Auth.Dummy
 import Yesod.Default.Util   (addStaticContentExternal)
 import Yesod.Core.Types     (Logger)
 import qualified Yesod.Core.Unsafe as Unsafe
@@ -140,10 +140,20 @@ instance YesodAuth App where
         x <- getBy $ UniqueUser $ credsIdent creds
         case x of
             Just (Entity uid _) -> return $ Authenticated uid
-            Nothing -> return $ ServerError "Authentication is not yet implemented."
+            Nothing -> do
+                now <- liftIO $ getCurrentTime
+                Authenticated <$> insert User
+                    { userIdent = credsIdent creds
+                    , userFirstName = "Blah"
+                    , userLastName = "Blah"
+                    , userPassword = "Blah"
+                    , userDateOfBirth = fromGregorian 0 1 1
+                    , userCreatedAt = now
+                    , userUpdatedAt = Nothing
+                    }
 
     -- You can add other plugins like Google Email, email or OAuth here
-    authPlugins _ = [authOpenId Claimed []]
+    authPlugins _ = [authDummy]
 
     authHttpManager = getHttpManager
 
