@@ -9,3 +9,11 @@ import Import.NoFoundation   as Import
 --   type @DB a@ (as opposed to @YesodDB App a@). This allows them to also be
 --   called in tests.
 type DB a = forall (m :: * -> *). (MonadIO m, Functor m) => ReaderT SqlBackend m a
+
+-- | Transform a raw string of Text (that is, formatted according to how it
+-- appears in code) as a single string of Text. This allows for using the
+-- multiline string quasiquoters, such as [s| |], to avoid having to add line
+-- breaks with an escape character manually, while also keeping the Text in the
+-- simplistic single line format, with no carriage returns.
+asSingleLine :: Text -> Text
+asSingleLine = mconcat . ((++ " ") <$>) . lines

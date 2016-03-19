@@ -1,5 +1,6 @@
 module Model.User (
-      createUserAndProfile
+      UserAndProfile
+    , createUserAndProfile
     ) where
 
 import Import
@@ -10,6 +11,12 @@ import Model.Persistent (Gender)
 
 -- | We use this data structure to get from a request body the minimum required
 -- information to create a User and their Profile
+
+-- Elaboration: We keep all private information in User, and information allowed
+-- to be public in Profile. The reason for using both of them here is that we
+-- want Users to start off with a Profile. To create both at once, we use this
+-- intermediary data structure to marshall between the front-end interface, and
+-- the database design.
 data UserAndProfile = UserAndProfile {
       ident :: Text
     , email :: Text

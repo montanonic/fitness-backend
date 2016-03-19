@@ -92,6 +92,7 @@ library
                  , case-insensitive
                  , wai
                  , transformers
+                 , raw-strings-qq
 
 executable         yesod-json
     if flag(library-only)

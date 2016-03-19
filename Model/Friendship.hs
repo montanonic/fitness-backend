@@ -5,12 +5,13 @@ module Model.Friendship (
 
 import Import
 
-sendFriendRequest :: UserId -> UserId -> UTCTime -> Friendship
-sendFriendRequest self to now = Friendship self to Nothing Nothing now
+import Model.Persistent (FriendshipAction(..))
 
-acceptFriendRequest :: Friendship -> UTCTime -> Friendship
-acceptFriendRequest f@Friendship{..} now =
-    f { friendshipBecameFriends = Just now }
+sendFriendRequest :: UserId -> UserId -> UTCTime -> DB FriendshipId
+sendFriendRequest self to now = insert $ Friendship self to Nothing Nothing now
 
-defriend :: Friendship
-defriend = undefined
+acceptFriendRequest :: FriendshipId -> UTCTime -> DB ()
+acceptFriendRequest fid now = do
+    self <- friendshipSecondUser <$> get404 fid
+    update fid [FriendshipBecameFriends =. Just now]
+    insert_ $ FriendshipLog fid self AcceptRequest now

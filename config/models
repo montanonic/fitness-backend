@@ -156,11 +156,10 @@ FriendshipLog
     user UserId -- who performed the action
 
     action FriendshipAction -- SendRequest, AcceptRequest, or Defriend.
-    timestamp UTCTime
+    timestamp UTCTime -- same as createdAt in other entities; this is merely
+      -- a more semantically appropriate name
 
-    createdAt UTCTime -- When the log was recorded is distinct from when
-      -- the action was made (the 'timestamp'). These values should never be
-      -- identical, as logs are not made at the same time actions are taken.
+    createdAt UTCTime SafeToRemove
 
 --------------------------------------------------------------------------------
 

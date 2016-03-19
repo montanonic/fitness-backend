@@ -1,5 +1,4 @@
-module Model.Persistent (
-    module Model.Persistent) where
+module Model.Persistent where
 
 {-
 Persistent automatically generates Primary Keys (ID's) for each Table row, so
