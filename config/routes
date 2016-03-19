@@ -6,8 +6,45 @@
 
 / HomeR GET
 
--- User
-/user         NewUserR POST
-/user/#UserId UserR GET PUT DELETE -- User creation happens at authentication.
+-- Note about PUT: I'll probably phase this out in favor of adding more routes
+-- and using POST requests on those routes. The reason to do so is in order to
+-- unify the browser-based and mobile implementation. The browser, without AJAX,
+-- cannot use PUT or DELETE actions, only GET and POST (through forms). We don't
+-- want to make JavaScript a *necessity* to use our application (and the less we
+-- can rely on it, the better), so our design should start off with JS-free
+-- compatible code wherever possible.
 
-/user/#UserId/profile ProfileR GET PUT
+-- Note about deletion: though deletion routes remove a resource, we do not
+-- actually delete the resource itself. The URL resource will of course be gone,
+-- but the data will be preserved either in logs, or by simply flagging that
+-- resource as inactive on the server-side, leading to the appearance of
+-- deletion on the client-side.
+-- True deletion of data, and how *much* such routes should delete are pending.
+-- The takeaway to note here though, is that when you DELETE something, you can
+-- almost guarantee that the full information of that resource will be preserved
+-- elsewhere.
+
+--
+-- ## User
+--
+
+-- User-creation, self-querying, and self-updating. Cannot query or modify any
+-- User other than oneself (since the User entity is used solely for
+-- identification/authentication, rights-management, and contact-information).
+/user UserR GET POST PUT
+
+--
+-- ## Profile
+--
+
+-- A user profile. We may modify this to accept a ProfileId instead, or perhaps
+-- be agnostic to either, accepting a UserId or ProfileId; we'll just have to
+-- see how the design grows.
+/profile/#UserId ProfileR GET PUT
+
+--
+-- ## Friendships
+--
+
+/friendRequest/#UserId FriendRequestR POST
+/friendRequest/#UserId/cancel CancelFriendRequestR POST

@@ -4,7 +4,8 @@ import Import.NoFoundation
 import Database.Persist.Sql (ConnectionPool, runSqlPool)
 import Text.Hamlet          (hamletFile)
 import Text.Jasmine         (minifym)
-import Yesod.Auth.Dummy
+import Yesod.Auth.Dummy (authDummy)
+import Yesod.Auth.Message (AuthMessage(IdentifierNotFound) )
 import Yesod.Default.Util   (addStaticContentExternal)
 import Yesod.Core.Types     (Logger)
 import qualified Yesod.Core.Unsafe as Unsafe
@@ -79,15 +80,6 @@ instance Yesod App where
             $(widgetFile "default-layout")
         withUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
 
-    -- The page to be redirected to when authentication is required.
-    authRoute _ = Just $ AuthR LoginR
-
-    -- Routes not requiring authentication.
-    isAuthorized (AuthR _) _ = return Authorized
-    isAuthorized FaviconR _ = return Authorized
-    isAuthorized RobotsR _ = return Authorized
-    -- Default to Authorized for now.
-    isAuthorized _ _ = return Authorized
 
     -- This function creates static content files in the static folder
     -- and names them based on a hash of their content. This allows
@@ -117,6 +109,42 @@ instance Yesod App where
 
     makeLogger = return . appLogger
 
+--
+-- ## Authorization code
+--
+
+    -- The page to be redirected to when authentication is required.
+    authRoute _ = Just $ AuthR (PluginR "dummy" [])
+
+    -- Routes not requiring authentication.
+    isAuthorized (AuthR _) _ = return Authorized
+    isAuthorized FaviconR _ = return Authorized
+    isAuthorized RobotsR _ = return Authorized
+
+    isAuthorized (UserR) _ = return Authorized
+
+    -- All other routes require being logged in.
+    isAuthorized _ _ = isLoggedIn
+
+isLoggedIn = do
+    maid <- maybeAuthId
+    case maid of
+        Nothing -> return AuthenticationRequired
+        Just _ -> return Authorized
+
+-- | We want to ensure that on certain routes, such as UserR, clients can only
+-- query and modify resources that are their own. This is necessary in order to
+-- ensure some level of privacy by preventing clients from accidentally
+-- accessing resources that would impinge upon that privacy.
+isSameUser userId = do
+    aid <- requireAuthId
+    if aid == userId
+        then return Authorized
+        else return $ Unauthorized "You cannot query or modify User information\
+            \ other than your own."
+
+--------------------------------------------------------------------------------
+
 -- How to run database actions.
 instance YesodPersist App where
     type YesodPersistBackend App = SqlBackend
@@ -140,17 +168,7 @@ instance YesodAuth App where
         x <- getBy $ UniqueUser $ credsIdent creds
         case x of
             Just (Entity uid _) -> return $ Authenticated uid
-            Nothing -> do
-                now <- liftIO $ getCurrentTime
-                Authenticated <$> insert User
-                    { userIdent = credsIdent creds
-                    , userFirstName = "Blah"
-                    , userLastName = "Blah"
-                    , userPassword = "Blah"
-                    , userDateOfBirth = fromGregorian 0 1 1
-                    , userCreatedAt = now
-                    , userUpdatedAt = Nothing
-                    }
+            Nothing -> return $ UserError $ IdentifierNotFound (credsIdent creds)
 
     -- You can add other plugins like Google Email, email or OAuth here
     authPlugins _ = [authDummy]

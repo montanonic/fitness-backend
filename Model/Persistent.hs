@@ -77,7 +77,7 @@ derivePersistField "FriendshipAction"
 data Gender
     = Male
     | Female
-    deriving (Show, Read, Eq, Enum, Bounded)
+    deriving (Eq, Read, Show)
 $(deriveJSON defaultOptions ''Gender)
 derivePersistField "Gender"
 

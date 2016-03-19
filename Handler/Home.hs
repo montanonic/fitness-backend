@@ -2,5 +2,7 @@ module Handler.Home where
 
 import Import
 
-getHomeR :: Handler Html
-getHomeR = defaultLayout $(widgetFile "home")
+getHomeR :: Handler Value
+getHomeR = do
+    sess <- getSession
+    returnJson . show $ sess

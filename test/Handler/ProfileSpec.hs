@@ -4,15 +4,6 @@ import TestImport
 
 spec :: Spec
 spec = withApp $ do
-
+    
     describe "getProfileR" $ do
-        error "Spec not implemented: getProfileR"
-
-
-    describe "postProfileR" $ do
-        error "Spec not implemented: postProfileR"
-
-
-    describe "putProfileR" $ do
-        error "Spec not implemented: putProfileR"
-
+        it "gives a 201" $ pending

@@ -16,13 +16,17 @@ library
     exposed-modules: Application
                      Foundation
                      Handler.Common
+                     Handler.FriendRequest
+                     Handler.CancelFriendRequest
                      Handler.Home
                      Handler.User
                      Handler.Profile
                      Import
                      Import.NoFoundation
                      Model
+                     Model.Friendship
                      Model.Persistent
+                     Model.User
                      Settings
                      Settings.StaticFiles
 
@@ -48,6 +52,7 @@ library
                 ViewPatterns
                 TupleSections
                 RecordWildCards
+                RankNTypes
 
     build-depends: base                          >= 4          && < 5
                  , yesod                         >= 1.4.1      && < 1.5
@@ -86,8 +91,7 @@ library
                  , time
                  , case-insensitive
                  , wai
-                 , serversession
-                 , serversession-backend-persistent
+                 , transformers
 
 executable         yesod-json
     if flag(library-only)
@@ -108,7 +112,10 @@ test-suite test
     other-modules: Handler.CommonSpec
                    Handler.ProfileSpec
                    Handler.UserSpec
+                   Handler.FriendRequest
+                   Handler.CancelFriendRequest
                    TestImport
+                   Utilities
 
     extensions: TemplateHaskell
                 QuasiQuotes
@@ -126,6 +133,7 @@ test-suite test
                 DeriveDataTypeable
                 ViewPatterns
                 TupleSections
+                RankNTypes
 
     build-depends: base
                  , yesod-json

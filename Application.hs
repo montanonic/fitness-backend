@@ -29,27 +29,19 @@ import Network.Wai.Middleware.RequestLogger (Destination (Logger),
                                              mkRequestLogger, outputFormat)
 import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
                                              toLogStr)
--- These allow us to switch from client-side sessions as default to server-side
--- sessions. This makes for easy integration with mobile platforms, since
--- cookies are nontrivial with them.
-import qualified Data.Proxy as P
-import qualified Web.ServerSession.Core as SS
-import qualified Web.ServerSession.Backend.Persistent as SS
-
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
 import Handler.Common
 import Handler.Home
 import Handler.User
 import Handler.Profile
+import Handler.FriendRequest
+import Handler.CancelFriendRequest
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
 -- comments there for more details.
 mkYesodDispatch "App" resourcesApp
-
--- http://haddock.stackage.org/lts-5.8/serversession-backend-persistent-1.0.2/Web-ServerSession-Backend-Persistent.html
-mkMigrate "migrateAll" (SS.serverSessionDefs (P.Proxy :: P.Proxy SS.SessionMap) ++ entityDefs)
 
 -- | This function allocates resources (such as a database connection pool),
 -- performs initialization and returns a foundation datatype value. This is also

@@ -16,27 +16,63 @@
 --------------------------------------------------------------------------------
 --#User
 
+-- | Currently the User entity should contain only critically identifying pieces
+-- of information. The intent is to
+
+-- OLD Description:
+-- Any field of the User Entity commented with PRIVATE must always be hidden
+-- from anyone who isn't the User. All other fields may optionally be made
+-- available to others (under a certain privacy regime, yet to be implemented),
+-- and visible through a User's profile.
+
 User json
     ident Text -- For Auth through Yesod
 
-    firstName Text
-    lastName Text
-
+    email Text -- must be unique
     password Text
 
-    dateOfBirth Day
-
     createdAt UTCTime
-    updatedAt UTCTime Maybe -- Allowed fields: ident.
+
+    firstName Text SafeToRemove
+    lastName Text SafeToRemove
+    dateOfBirth Day SafeToRemove
+    gender Gender SafeToRemove
+
+    -- going to move this functionality to a UserLog Entity instead of leaving
+    -- it here.
+    updatedAt UTCTime Maybe SafeToRemove -- Update when ident, firstName, lastName, password,
+                            -- or dateOfBirth are changed. Make sure all changes
+                            -- are logged in database (need another table).
 
     UniqueUser ident
+    UniqueUserEmail email
 
-    deriving Typeable Read Eq Show
+    deriving Typeable Eq Show
 --------------------------------------------------------------------------------
 --#Profile ; data: Gender
 
--- | This is what the old User entity used to be, but it now references the new
--- User table, which stores the unique identifying information for that person.
+-- | The Profile entity contains information that can be added to a User's
+-- profile. Information from the User entity not considered private will also
+-- be included in queries for the Profile, but will not be repeated here for
+-- the sake of avoiding data redundancy.
+
+-- There's a design decision here to make: currently the User entity contains a
+-- lot of core information that would be used on their profile page. As we
+-- expand upon the information a User can post about themselves, we may decide
+-- to put that information within the User entity as a nullable field, not
+-- required upon creation of the User. Alternatively, we can instead add that
+-- information in this entity.
+
+-- Here's the dilemma: When a client accesses a user's profile that is other
+-- than the logged-in user's own profile, we must, of course, query and get that
+-- other user's information, which means that it will end up in the current
+-- client. This is obviously a no-go if we're sending the whole user entity, as
+-- that contains private information about the user.
+
+-- It may be wise to circumvent a whole class of privacy concerns by making the
+-- Profile entity the Public-facing User entity, containing *only* those fields
+-- that a User has decided to make public (under a particular permission
+-- regime).
 
 Profile json
     user UserId
@@ -44,17 +80,19 @@ Profile json
     firstName Text
     lastName Text
 
-    gender Gender -- See Model/Persistent -> Gender
+    dateOfBirth Day
 
-    -- lastLogin UTCTime -- not sure if I should implement
+    gender Gender
 
-    createdAt UTCTime
-    updatedAt UTCTime Maybe -- Allowed fields: ALL BUT user.
+    createdAt UTCTime SafeToRemove -- redundant, given the User entity:
+      -- a User and Profile are created at the same time by postUsersR, and
+      -- therefore we don't need this field here.
 
-    UniqueProfile user -- This makes it easy to fetch all profile info with a
-      -- UserId. We can easily get that Id with maybeAuthId
 
-    deriving Read Eq Show
+    updatedAt UTCTime Maybe SafeToRemove -- redundant, given ProfileLog
+
+    UniqueProfile user -- We can easily fetch any user's profile by using their
+      -- UserId.
 
 --------------------------------------------------------------------------------
 --#ProfileLog ; data: UserUpdate
@@ -101,12 +139,10 @@ Friendship json
       -- deactivated, but we do not delete it.
 
     createdAt UTCTime
-    updatedAt UTCTime Maybe -- Allowed fields: becameFriends, whoDefriended.
+    updatedAt UTCTime Maybe SafeToRemove -- Allowed fields: becameFriends, whoDefriended.
 
-    UniqueFriendship firstUser secondUser -- in queries we might need to also
-      -- search for UniqueFriendship secondUser firstUser as well, to ensure
-      -- that we find the relationship. Just a reminder in case behavior is
-      -- ever buggy in this table.
+    UniqueFriendship firstUser secondUser
+    UniqueFriendship' secondUser firstUser
 
 --------------------------------------------------------------------------------
 --#FriendshipLog ; data: FriendshipAction

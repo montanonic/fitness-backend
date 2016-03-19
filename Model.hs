@@ -14,5 +14,5 @@ import Model.Persistent
 
 -- Rationale for the changes made, here:
 -- http://haddock.stackage.org/lts-5.8/serversession-backend-persistent-1.0.2/Web-ServerSession-Backend-Persistent.html
-share [mkPersist sqlSettings, mkSave "entityDefs"]
+share [mkPersist sqlSettings, mkMigrate "migrateAll"]
     $(persistFileWith lowerCaseSettings "config/models")
