@@ -93,6 +93,7 @@ library
                  , wai
                  , transformers
                  , raw-strings-qq
+                 , esqueleto
 
 executable         yesod-json
     if flag(library-only)

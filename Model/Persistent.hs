@@ -43,27 +43,16 @@ import Prelude
 import Database.Persist.TH
 import Data.Aeson.TH
 
--- | Currently, a user can send a friend request, accept a request, or defriend,
--- which does not require a request or notification.
 data FriendshipAction
     = SendRequest
+    | CancelRequest
     | AcceptRequest
+    | RejectRequest
     | Defriend
     deriving (Show, Read, Eq)
 derivePersistField "FriendshipAction"
 
 --------------------------------------------------------------------------------
-
--- NOTE: I intend to use only the Male/Female fields for now. The Specify field
--- is included for sake of completeness. I think deferring gender options to
--- a User's Profile might be the best route, while requiring that users
--- select from Male/Female for biological sex identification at the beginning.
---
--- Given that Sex and Gender are not the same, we may want to rephrase this as
--- Sex, given the biological relevance of such information. That said, if this
--- app will be tying a user to their medical records in some way, we'd already
--- have access to biological sex information, so only Gender would not be
--- redundant.
 
 -- | Binary gender choice + Specify (a more kindly-worded 'Other' field), which
 -- takes two Strings. This allows a user to specify their gender and gender
@@ -76,6 +65,7 @@ derivePersistField "FriendshipAction"
 data Gender
     = Male
     | Female
+    -- | Specify           we're going to ignore this field for now
     deriving (Eq, Read, Show)
 $(deriveJSON defaultOptions ''Gender)
 derivePersistField "Gender"
