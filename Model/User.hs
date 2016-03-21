@@ -4,7 +4,7 @@ module Model.User (
     ) where
 
 import Import
-import Control.Monad.Trans.Maybe
+import Control.Error
 import Data.Aeson.TH (deriveJSON, defaultOptions)
 
 import Model.Persistent (Gender)

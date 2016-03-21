@@ -1,6 +1,6 @@
-module Handler.FriendRequest where
+module Handler.FriendRequest
+    ( module Handler.FriendRequest
+    ) where
 
-import Import
-
-postFriendRequestR :: UserId -> Handler Html
-postFriendRequestR userId = error "Not yet implemented: postFriendRequestR"
+import Handler.FriendRequest.Create as Handler.FriendRequest
+import Handler.FriendRequest.Cancel as Handler.FriendRequest

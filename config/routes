@@ -31,7 +31,8 @@
 -- User-creation, self-querying, and self-updating. Cannot query or modify any
 -- User other than oneself (since the User entity is used solely for
 -- identification/authentication, rights-management, and contact-information).
-/user UserR GET POST PUT
+/user UserR GET POST
+/user/update UpdateUserR POST
 
 --
 -- ## Profile
@@ -46,5 +47,7 @@
 -- ## Friendships
 --
 
-/friendRequest/#UserId FriendRequestR POST
+/user/#UserId/friendships FriendshipsR GET
+
+/friendRequest/#UserId/create CreateFriendRequestR POST
 /friendRequest/#UserId/cancel CancelFriendRequestR POST

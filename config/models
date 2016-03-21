@@ -127,14 +127,31 @@ ProfileLog
 --------------------------------------------------------------------------------
 --#Friendship
 
+-- It may make sense to turn this entity into a Relationship entity. This is
+-- more general and would allow us to account for doctor-patient type
+-- relationships. That said, for privacy/security reasons, and probably for data
+-- reasons as well, it likely makes more sense to have a separate table for
+-- doctors, as they are more likely to be a one-to-many relationship (one
+-- doctor, many  patients), and friendships between users are a many-to-many
+-- relationship, which is why we have this junction table in the first place
+-- (containing foreign keys to each of two users).
+
 Friendship json
     firstUser UserId -- This *must always* be the user who *sent* the friend
       -- request
     secondUser UserId
 
-    isActive Bool -- defaults to False, becomes active when a friend request is
+    isActive Bool -- becomes active when a friend request is
       -- accepted, becomes inactive again if a defriending occurs. We can see
       -- who defriended who in the ProfileLog entity.
+
+    isJustRequest Bool -- tells us if this is only meant to be a friend request.
+      -- the data handling must enforce that this is never true when isActive is
+      -- true as well. We may choose to create a separate entity for friendship
+      -- requests, but it would only really make sense as a transitory data
+      -- structure. The whole point of a friendship is showing a relationship
+      -- between two users, so we might as well roll the request together with
+      -- the friendship entity itself.
 
     createdAt UTCTime
 
@@ -160,10 +177,22 @@ FriendshipLog
 
     action FriendshipAction -- SendRequest, CancelRequest, AcceptRequest,
       -- RejectRequest, or Defriend.
-      
-    timestamp UTCTime -- same as createdAt in other entities; this is merely
-      -- a more semantically appropriate name
 
+    createdAt UTCTime
+
+    timestamp UTCTime SafeToRemove
+
+--------------------------------------------------------------------------------
+
+----------------------------------NOTIFICATIONS---------------------------------
+
+--------------------------------------------------------------------------------
+--#Notification
+
+--Notification
+    --user UserId
+
+    --type -- types of notifications
 --------------------------------------------------------------------------------
 
 ----------------------------------CONVERSATIONS---------------------------------
