@@ -116,10 +116,7 @@ test-suite test
     ghc-options:       -Wall
 
     other-modules: Handler.CommonSpec
-                   Handler.ProfileSpec
-                   Handler.UserSpec
-                   Handler.FriendRequest
-                   Handler.CancelFriendRequest
+                   Handler.UserAndProfileSpec
                    TestImport
                    Utilities
 
@@ -140,6 +137,7 @@ test-suite test
                 ViewPatterns
                 TupleSections
                 RankNTypes
+                RecordWildCards
 
     build-depends: base
                  , yesod-json
@@ -156,3 +154,6 @@ test-suite test
                  , classy-prelude
                  , classy-prelude-yesod
                  , aeson
+                 , yesod-auth
+                 , yesod-persistent
+                 , wai-extra

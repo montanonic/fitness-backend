@@ -11,7 +11,12 @@ import Model.User (UserAndProfile, createUserAndProfile)
 
 -- | Return the logged-in user's own User entity.
 getUserR :: Handler Value
-getUserR = requireAuth >>= returnJson
+getUserR = do
+    muser <- maybeAuth
+    case muser of
+        Nothing -> sendResponseStatus status401 ("User must be authenticated to\
+            \ query this route" :: Text)
+        Just user -> returnJson user
 
 -- | Create a User. Currently the client has to provide the User's unique ident.
 -- This will definitely be subject to change later on, and so it is priority to

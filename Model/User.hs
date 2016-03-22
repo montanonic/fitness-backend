@@ -1,7 +1,4 @@
-module Model.User (
-      UserAndProfile
-    , createUserAndProfile
-    ) where
+module Model.User where
 
 import Import
 import Control.Error
@@ -26,7 +23,7 @@ data UserAndProfile = UserAndProfile {
     , lastName :: Text
     , dateOfBirth :: Day
     , gender :: Gender
-    }
+    } deriving Eq
 $(deriveJSON defaultOptions ''UserAndProfile)
 
 createUserAndProfile :: UTCTime -> UserAndProfile -> DB (Maybe UserId)

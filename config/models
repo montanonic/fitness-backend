@@ -28,6 +28,10 @@ User json
     UniqueUser ident
     UniqueUserEmail email
 
+    firstName Text SafeToRemove
+    lastName Text SafeToRemove
+    dateOfBirth Text SafeToRemove
+
     deriving Typeable Eq Show
 --------------------------------------------------------------------------------
 --#UserLog#
@@ -41,18 +45,6 @@ UserLog
 
 --------------------------------------------------------------------------------
 --#Profile# ; data: Gender
-
--- | The Profile entity contains information that can be added to a User's
--- profile. Information from the User entity not considered private will also
--- be included in queries for the Profile, but will not be repeated here for
--- the sake of avoiding data redundancy.
-
--- There's a design decision here to make: currently the User entity contains a
--- lot of core information that would be used on their profile page. As we
--- expand upon the information a User can post about themselves, we may decide
--- to put that information within the User entity as a nullable field, not
--- required upon creation of the User. Alternatively, we can instead add that
--- information in this entity.
 
 -- Here's the dilemma: When a client accesses a user's profile that is other
 -- than the logged-in user's own profile, we must, of course, query and get that
@@ -75,7 +67,7 @@ Profile json
 
     gender Gender
 
-    createdAt UTCTime -- redundant, given the User entity:
+    createdAt UTCTime default=now() -- redundant, given the User entity:
       -- a User and Profile are created at the same time by postUsersR, and
       -- therefore we don't need this field here.
       -- That said, for the sake of simplicity, it costs very little to include
@@ -104,6 +96,9 @@ ProfileLog
 
     createdAt UTCTime -- These logs are recorded at the same time a change
       -- is made. Hence, this is the timestamp of the change.
+
+    user UserId SafeToRemove
+
 
 --------------------------------------------------------------------------------
 --#ProfileOptions#
@@ -149,6 +144,7 @@ Friendship json
     whoDefriended UserId Maybe SafeToRemove
     becameFriends UTCTime Maybe SafeToRemove -- if NULL, the first user sent a
       -- request, and the second never accepted.
+    updatedAt UTCTime SafeToRemove
 
     UniqueFriendship firstUser secondUser
     UniqueFriendship' secondUser firstUser -- the opposite permutation prevents
