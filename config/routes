@@ -49,5 +49,5 @@
 
 /user/#UserId/friendships FriendshipsR GET
 
-/friendRequest/#UserId/create CreateFriendRequestR POST
-/friendRequest/#UserId/cancel CancelFriendRequestR POST
+/friendRequest/#UserId/#UserId/create CreateFriendRequestR POST
+/friendRequest/#UserId/#UserId/cancel CancelFriendRequestR POST

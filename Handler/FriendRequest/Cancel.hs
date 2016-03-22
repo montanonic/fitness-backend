@@ -2,11 +2,12 @@ module Handler.FriendRequest.Cancel where
 
 import Import
 
-import Model.Friendship (TheirId, cancelFriendRequest, getUniqueFriendship)
+import Model.Friendship (YourId, TheirId, cancelFriendRequest,
+    getUniqueFriendship)
 
-postCancelFriendRequestR :: TheirId -> Handler ()
-postCancelFriendRequestR them = do
-    you <- requireAuthId
+postCancelFriendRequestR :: YourId -> TheirId -> Handler ()
+postCancelFriendRequestR you them = do
+    -- you <- requireAuthId
     cancel <- liftIO $ cancelFriendRequest <$> getCurrentTime
     runDB $ do
         mfriendshipEnt <- getUniqueFriendship you them

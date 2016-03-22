@@ -1,6 +1,7 @@
 module Model.Friendship (
       YourId
     , TheirId
+    , FriendshipException(..)
     , createFriendRequest
     , cancelFriendRequest
     , acceptFriendRequest
@@ -8,6 +9,7 @@ module Model.Friendship (
     , getUniqueFriendshipId
     , becameFriends
     , lastBecameFriends
+    , listFriendIds
     ) where
 
 import Import

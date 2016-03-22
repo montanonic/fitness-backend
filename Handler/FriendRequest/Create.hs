@@ -2,11 +2,11 @@ module Handler.FriendRequest.Create where
 
 import Import
 
-import Model.Friendship (TheirId, createFriendRequest)
+import Model.Friendship (YourId, TheirId, createFriendRequest)
 
-postCreateFriendRequestR :: TheirId -> Handler ()
-postCreateFriendRequestR them = do
-    you <- requireAuthId
+postCreateFriendRequestR :: YourId -> TheirId -> Handler ()
+postCreateFriendRequestR you them = do
+    --you <- requireAuthId
     createFR <- liftIO $ createFriendRequest <$> getCurrentTime
     _friendshipId <- runDB $ createFR you them
     -- setNotification them friendshipId -- notification system doesn't exist,
