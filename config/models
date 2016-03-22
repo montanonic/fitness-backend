@@ -248,6 +248,10 @@ Conversation json
 --------------------------------------------------------------------------------
 --#Like#
 
+-- LIKES should just be an Int accumulator on a wall post or comment. They
+-- should NOT be their own entity. That said, when a user likes and dislikes
+-- a post (along with that history) should be logged.
+
 Like json
     liker UserId
 
