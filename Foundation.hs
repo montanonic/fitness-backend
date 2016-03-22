@@ -121,7 +121,8 @@ instance Yesod App where
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
 
-    isAuthorized (UserR) _ = return Authorized
+    isAuthorized HomeR _ = return Authorized
+    isAuthorized UserR _ = return Authorized
 
     -- All other routes require being logged in.
     isAuthorized _ _ = isLoggedIn

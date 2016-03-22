@@ -23,14 +23,16 @@ User json
     email Text -- must be unique
     password Text
 
+    lastCheckedNotifications UTCTime default=now() -- the last time a user
+      -- checked their notifications. This field should have its own route to
+      -- query, and ought to be called each time the client renders the
+      -- notification tab, in order to display the correct number of unread
+      -- notifications.
+
     createdAt UTCTime
 
     UniqueUser ident
     UniqueUserEmail email
-
-    firstName Text SafeToRemove
-    lastName Text SafeToRemove
-    dateOfBirth Text SafeToRemove
 
     deriving Typeable Eq Show
 --------------------------------------------------------------------------------
@@ -137,14 +139,10 @@ Friendship json
       -- requests, but it would only really make sense as a transitory data
       -- structure. The whole point of a friendship is showing a relationship
       -- between two users, so we might as well roll the request together with
-      -- the friendship entity itself.
+      -- the friendship entity itself, since it relies upon precisely the same
+      -- data.
 
     createdAt UTCTime
-
-    whoDefriended UserId Maybe SafeToRemove
-    becameFriends UTCTime Maybe SafeToRemove -- if NULL, the first user sent a
-      -- request, and the second never accepted.
-    updatedAt UTCTime SafeToRemove
 
     UniqueFriendship firstUser secondUser
     UniqueFriendship' secondUser firstUser -- the opposite permutation prevents
@@ -176,10 +174,16 @@ FriendshipLog
 --------------------------------------------------------------------------------
 --#Notification#
 
---Notification
-    --user UserId
+Notification
+    user UserId
 
-    --type -- types of notifications
+    sentFrom UserId Maybe SafeToRemove
+
+    type NotificationType SafeToRemove
+
+    wasRead Bool SafeToRemove
+
+    createdAt UTCTime SafeToRemove
 --------------------------------------------------------------------------------
 
 ----------------------------------CONVERSATIONS---------------------------------

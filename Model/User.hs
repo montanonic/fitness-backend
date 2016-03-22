@@ -28,7 +28,7 @@ $(deriveJSON defaultOptions ''UserAndProfile)
 
 createUserAndProfile :: UTCTime -> UserAndProfile -> DB (Maybe UserId)
 createUserAndProfile now UserAndProfile{..} = runMaybeT $ do
-    let user = User ident email password now
+    let user = User ident email password now now
     let toProfile userId =
             Profile userId firstName lastName dateOfBirth gender now
 

@@ -54,3 +54,10 @@ data UserUpdate
     | UpdatePassword
     deriving (Show, Read, Eq)
 derivePersistField "UserUpdate"
+
+--------------------------------------------------------------------------------
+
+data NotificationType
+    = FriendRequest
+    deriving (Show, Read, Eq)
+derivePersistField "NotificationType"
