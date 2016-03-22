@@ -1,44 +1,5 @@
 module Model.Persistent where
 
-{-
-Persistent automatically generates Primary Keys (ID's) for each Table row, so
-the data below does not have to explicitly encode it. The reference to a
-Row's primary key will just be the table-name + 'Id'. So, to reference a
-user's unique ID, you'd write `UserId`.
-
-The basic table syntax is a capitalized table-name, followed by indented
-entries, each specifying a row Field (the first word), and the Value for
-that Field (the second word, which corresponds to a PSQL data type).
-
-For more information on the syntax used here, see:
-https://github.com/yesodweb/persistent/wiki/Persistent-entity-syntax
-The "Conversion table" from that link contains all of the standard
-Persistent data types.
-
-Data types that are not specified in the "Conversion table" are types
-created specifically for this application, know as "Sum types". For
-example, `Gender` is not a standard Persistent Value. All such data is
-created in the Model/Data/ directory. Please consult it for more
-information about the usage of a specific data type.
-
-Most tables will contain `createdAt` and `updatedAt` fields. The latter
-will be NULL upon creation. Fields in the table which allow UPDATE
-actions will be listed in the comment to `updatedAt`.
-
-If you want to search for a particular table, prefix it with # and then
-search. For example, `#Friendship` will take you to the Friendship table.
-
-If a table has an updatedAt field, it can be Updated. Otherwise, it allows
-only Creation and Reading (querying). If deletion is allowed, it have a
-'can delete' comment.
-
-If a table has documentation on it, there will be a 'documented' comment
-next to its search tag. Consult the documentation/Model/ directory.
-
-If a field uses a custom data type, the table comment will have a 'data'
-entry followed by a list of all custom datatypes used in the table.
--}
-
 import Prelude
 import Database.Persist.TH
 import Data.Aeson.TH
@@ -79,8 +40,17 @@ derivePersistField "Gender"
 data ProfileUpdate
     = UpdateFirstName
     | UpdateLastName
-    | UpdateEmail
+    | UpdatePublicEmail
     | UpdateDateOfBirth
     | UpdateGender
     deriving (Show, Read, Eq)
 derivePersistField "ProfileUpdate"
+
+--------------------------------------------------------------------------------
+
+data UserUpdate
+    = UpdateIdent
+    | UpdateEmail
+    | UpdatePassword
+    deriving (Show, Read, Eq)
+derivePersistField "UserUpdate"

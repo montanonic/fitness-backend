@@ -1,29 +1,21 @@
 -- TODO:
 
--- Add entities for logging message/comment data, so that we can have edit
--- histories.
-
--- Add logging entities for likes.
-
 -- Figure out if it's better for like entities to be separated to be specific
 -- to comments or posts, or to be consolidated into a single Like entity with
 -- NULLable fields referring either to a CommentId or PostId, as it is now.
 
+
+-- Search for #EntityName# if you want to instantly be taken to a data entity.
 --------------------------------------------------------------------------------
 
 ------------------------------------USER INFO-----------------------------------
 
 --------------------------------------------------------------------------------
---#User
+--#User#
 
 -- | Currently the User entity should contain only critically identifying pieces
--- of information. The intent is to
-
--- OLD Description:
--- Any field of the User Entity commented with PRIVATE must always be hidden
--- from anyone who isn't the User. All other fields may optionally be made
--- available to others (under a certain privacy regime, yet to be implemented),
--- and visible through a User's profile.
+-- of information. The intent is to restrict access to the User entity to anyone
+-- who isn't themselves that user.
 
 User json
     ident Text -- For Auth through Yesod
@@ -33,23 +25,22 @@ User json
 
     createdAt UTCTime
 
-    firstName Text SafeToRemove
-    lastName Text SafeToRemove
-    dateOfBirth Day SafeToRemove
-    gender Gender SafeToRemove
-
-    -- going to move this functionality to a UserLog Entity instead of leaving
-    -- it here.
-    updatedAt UTCTime Maybe SafeToRemove -- Update when ident, firstName, lastName, password,
-                            -- or dateOfBirth are changed. Make sure all changes
-                            -- are logged in database (need another table).
-
     UniqueUser ident
     UniqueUserEmail email
 
     deriving Typeable Eq Show
 --------------------------------------------------------------------------------
---#Profile ; data: Gender
+--#UserLog#
+
+UserLog
+    user UserId
+
+    update UserUpdate -- UpdateIdent, UpdateEmail, UpdatePassword
+
+    createdAt UTCTime
+
+--------------------------------------------------------------------------------
+--#Profile# ; data: Gender
 
 -- | The Profile entity contains information that can be added to a User's
 -- profile. Information from the User entity not considered private will also
@@ -84,18 +75,17 @@ Profile json
 
     gender Gender
 
-    createdAt UTCTime SafeToRemove -- redundant, given the User entity:
+    createdAt UTCTime -- redundant, given the User entity:
       -- a User and Profile are created at the same time by postUsersR, and
       -- therefore we don't need this field here.
-
-
-    updatedAt UTCTime Maybe SafeToRemove -- redundant, given ProfileLog
+      -- That said, for the sake of simplicity, it costs very little to include
+      -- this rather standard field.
 
     UniqueProfile user -- We can easily fetch any user's profile by using their
       -- UserId.
 
 --------------------------------------------------------------------------------
---#ProfileLog ; data: UserUpdate
+--#ProfileLog# ; data: UserUpdate
 
 -- | Prevents data loss from meaningful changes to the Profile entity. Currently
 -- omits logging of LogIns and LogOuts, as that seems a bit overboard;
@@ -104,18 +94,19 @@ Profile json
 -- Every log action here is an UPDATE.
 
 ProfileLog
-    user UserId
+    profile ProfileId
 
     action ProfileUpdate -- UpdateFirstName, UpdateLastName, UpdateEmail,
       -- UpdateDateOfBirth, UpdateGender.
-    previousValue Text -- all values are converted to text so that we don't
-      -- have to use multiple fields to satisfy differing data types.
+    previousValue Text -- the previous value of the field that was changed.
+      -- all values are converted to text so that we don't have to use multiple
+      -- fields to satisfy differing data types.
 
     createdAt UTCTime -- These logs are recorded at the same time a change
       -- is made. Hence, this is the timestamp of the change.
 
 --------------------------------------------------------------------------------
---#ProfileOptions
+--#ProfileOptions#
 
 -- | One example of options would be a user's display preferences for their
 -- profile in terms of what personal information they want to show on their
@@ -125,7 +116,7 @@ ProfileLog
 -- structure this model.
 
 --------------------------------------------------------------------------------
---#Friendship
+--#Friendship#
 
 -- It may make sense to turn this entity into a Relationship entity. This is
 -- more general and would allow us to account for doctor-patient type
@@ -156,8 +147,8 @@ Friendship json
     createdAt UTCTime
 
     whoDefriended UserId Maybe SafeToRemove
-    becameFriends UTCTime Maybe SafeToRemove -- if NULL, the first user sent a request, and
-      -- the second never accepted.
+    becameFriends UTCTime Maybe SafeToRemove -- if NULL, the first user sent a
+      -- request, and the second never accepted.
 
     UniqueFriendship firstUser secondUser
     UniqueFriendship' secondUser firstUser -- the opposite permutation prevents
@@ -165,7 +156,7 @@ Friendship json
       -- first, which wouldn't make any sense.
 
 --------------------------------------------------------------------------------
---#FriendshipLog ; data: FriendshipAction
+--#FriendshipLog# ; data: FriendshipAction
 
 -- | The idea with this is to make sure that we have a full history of any
 -- Friendship-level actions.
@@ -187,7 +178,7 @@ FriendshipLog
 ----------------------------------NOTIFICATIONS---------------------------------
 
 --------------------------------------------------------------------------------
---#Notification
+--#Notification#
 
 --Notification
     --user UserId
@@ -198,7 +189,7 @@ FriendshipLog
 ----------------------------------CONVERSATIONS---------------------------------
 
 --------------------------------------------------------------------------------
---#ConversationUser
+--#ConversationUser#
 
 -- | Points a User to a Conversation. When created the isActive field will be
 -- true, indicating that they will receive updates to the conversation and it
@@ -222,7 +213,7 @@ ConversationUser json
     UniqueConversationUser conversation user -- only 1 user per conversation
 
 --------------------------------------------------------------------------------
---#ConversationMessage
+--#ConversationMessage#
 
 -- | A single conversation contains 1 or more messages. This table contains
 -- each message, along with the Conversation it points to.
@@ -238,7 +229,7 @@ ConversationMessage json
         -- was made to a message (supposing we allow edits)
 
 --------------------------------------------------------------------------------
---#Conversation
+--#Conversation#
 
 -- | The entries for this table are sparse. That's because it will be used in
 -- SQL Joins to link between the ConversationUsers and ConversationMessages.
@@ -259,7 +250,7 @@ Conversation json
 --------------------------------NEWS FEED / WALLS-------------------------------
 
 --------------------------------------------------------------------------------
---#Like
+--#Like#
 
 Like json
     liker UserId
@@ -275,7 +266,7 @@ Like json
     createdAt UTCTime
 
 --------------------------------------------------------------------------------
---#PostComment
+--#PostComment#
 
 -- | I know this sounds like an action but it is not; it should be read as a
 -- noun, not a verb. This table references Post Comments to an actual WallPost
@@ -299,7 +290,7 @@ PostComment json
     updatedAt UTCTime Maybe -- Allowed fields: content(?).
 
 --------------------------------------------------------------------------------
---#WallPost
+--#WallPost#
 
 -- Not named "Post" in order to avoid name-conflicts with the HTTP POST method.
 -- Currently lacks support for Media types.
@@ -319,7 +310,7 @@ WallPost json
 --------------------------------------MEDIA-------------------------------------
 
 --------------------------------------------------------------------------------
---#Image
+--#Image#
 
 Image
     content ByteString
@@ -327,7 +318,7 @@ Image
     uploadedBy UserId
 
 --------------------------------------------------------------------------------
---#Video
+--#Video#
 
 Video
     content ByteString

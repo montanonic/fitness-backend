@@ -33,7 +33,7 @@ createUserAndProfile :: UTCTime -> UserAndProfile -> DB (Maybe UserId)
 createUserAndProfile now UserAndProfile{..} = runMaybeT $ do
     let user = User ident email password now
     let toProfile userId =
-            Profile userId firstName lastName dateOfBirth gender
+            Profile userId firstName lastName dateOfBirth gender now
 
     uid <- MaybeT $ insertUnique user
     lift $ insert_ (toProfile uid)
