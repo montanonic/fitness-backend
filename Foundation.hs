@@ -117,12 +117,18 @@ instance Yesod App where
     authRoute _ = Just $ AuthR (PluginR "dummy" [])
 
     -- Routes not requiring authentication.
+    -- True filters for requests that are Write-requests, and False is for
+    -- Read-only requests.
     isAuthorized (AuthR _) _ = return Authorized
     isAuthorized FaviconR _ = return Authorized
     isAuthorized RobotsR _ = return Authorized
 
     isAuthorized HomeR _ = return Authorized
-    isAuthorized UserR _ = return Authorized
+    -- no login is required to create a User currently, though in production
+    -- we must definitely tie in authentication to the same stage as user
+    -- creation, otherwise malicious clients could spam our database by creating
+    -- new users.
+    isAuthorized UserR True = return Authorized -- this should be changed
 
     -- All other routes require being logged in.
     isAuthorized _ _ = isLoggedIn

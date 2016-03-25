@@ -7,6 +7,7 @@ import TestImport
 import Data.Aeson (encode, decode)
 import Yesod.Persist.Core (getBy404, get404)
 import Network.Wai.Test (SResponse(..))
+import Yesod.Auth (requireAuthId)
 
 import Model.User (UserAndProfile(..), createUserAndProfile)
 import Utilities (buildUserAndProfile, authenticateAs, createNewUserAndProfile
@@ -43,12 +44,14 @@ spec = withApp $ do
                 (userAndProfile)
 
     describe "getUserR" $ do
-        it "gives a 401 when user is not authenticated/logged-in" $ do
+        let msg = "gives a 303 when user is not authenticated/logged-in, "
+                ++ "redirecting them to log in"
+        it msg $ do
             (user, _) <- createNewUserAndProfile
 
             getJson UserR
 
-            statusIs 401
+            statusIs 303
 
         let msg = "gives a 200 when user is authenticated, and the query result"
                 ++ " is equal to the user record originally inserted into the DB"
@@ -69,6 +72,13 @@ spec = withApp $ do
 {-
     describe "getProfileR" $ do
         it "returns a 200" $ do
+            (user, _) <- createNewUserAndProfile
+
+            authenticateAs user
+
             uid <- requireAuthId
 
+            get (ProfileR uid)
+
+            statusIs 200
 -}

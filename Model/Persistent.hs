@@ -59,5 +59,6 @@ derivePersistField "UserUpdate"
 
 data NotificationType
     = FriendRequest
+    | NewMessage
     deriving (Show, Read, Eq)
 derivePersistField "NotificationType"

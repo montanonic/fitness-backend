@@ -28,6 +28,7 @@ library
                      Import.NoFoundation
                      Model
                      Model.Friendship
+                     Model.Notifications
                      Model.Persistent
                      Model.User
                      Settings
@@ -97,7 +98,7 @@ library
                  , raw-strings-qq
                  , esqueleto
                  , errors
-                 , exceptions
+                 , lifted-base
 
 executable         yesod-json
     if flag(library-only)

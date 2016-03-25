@@ -115,32 +115,47 @@ ProfileLog
 --------------------------------------------------------------------------------
 --#Friendship#
 
--- It may make sense to turn this entity into a Relationship entity. This is
--- more general and would allow us to account for doctor-patient type
--- relationships. That said, for privacy/security reasons, and probably for data
--- reasons as well, it likely makes more sense to have a separate table for
--- doctors, as they are more likely to be a one-to-many relationship (one
--- doctor, many  patients), and friendships between users are a many-to-many
--- relationship, which is why we have this junction table in the first place
--- (containing foreign keys to each of two users).
+-- when a user sends a friend request, what they are really doing is creating a
+-- Friendship entity, with isActive and isRequest both set to True. isRequest is
+-- what tells us that this is to be treated as a Friend Request, and *not* a
+-- friendship; I explain why we use the same entity for both in the entity
+-- description above.
+
+-- We could choose to create a separate entity for friendship requests, but it
+-- would only really make sense as a transitory data structure. The whole point
+-- of a friendship is showing a relationship between two users, so we might as
+-- well roll the request together with the friendship entity itself, since it
+-- relies upon precisely the same data.
 
 Friendship json
     firstUser UserId -- This *must always* be the user who *sent* the friend
       -- request
     secondUser UserId
 
-    isActive Bool -- becomes active when a friend request is
-      -- accepted, becomes inactive again if a defriending occurs. We can see
-      -- who defriended who in the ProfileLog entity.
+    -- It's possible that all of our current functionality can be wrapped up
+    -- into making isActive a nullable field, where null represents that it is
+    -- a friend request, False represents not being friends and this not being
+    -- a request either, and True represents them being friends.
+    --
+    -- It doesn't appear like we would use the additional fourth indicator that
+    -- isActive = True, isRequest = True, would give us. So with only three
+    -- options: Friends, not Friends, a Request, a Maybe Bool seems appropriate.
+    --
+    -- That said, it *is* much clearer what's going on when we make things
+    -- explicit as we do here, and so I'll stick with this model for now and
+    -- leave this note here for future consideration.
 
-    isJustRequest Bool -- tells us if this is only meant to be a friend request.
-      -- the data handling must enforce that this is never true when isActive is
-      -- true as well. We may choose to create a separate entity for friendship
-      -- requests, but it would only really make sense as a transitory data
-      -- structure. The whole point of a friendship is showing a relationship
-      -- between two users, so we might as well roll the request together with
-      -- the friendship entity itself, since it relies upon precisely the same
-      -- data.
+    isActive Bool -- are these users actually friends?
+
+    isRequest Bool -- does this entity denote a Friend Request rather than a
+      -- Friendship? INVARIANT: isActive should *never* be True while this field
+      -- is True. You shouldn't be able to send a friend request if you are
+      -- already friends.
+
+
+
+    isJustRequest Bool SafeToRemove
+
 
     createdAt UTCTime
 
@@ -177,13 +192,38 @@ FriendshipLog
 Notification
     user UserId
 
-    sentFrom UserId Maybe SafeToRemove
+    type NotificationType -- without this field, we'd have to start with the
+      -- more specific notifications, such as FriendshipNotification, and then
+      -- lookup the notification Id in this table. This is typically not the
+      -- direction we'd like to go in: rather, we want to know what type of
+      -- notification we have, and then join with the more specific type to get
+      -- unique information that pertains to that type of notification.
 
-    type NotificationType SafeToRemove
+    seen Bool -- has the user looked at this notification?
 
-    wasRead Bool SafeToRemove
+    createdAt UTCTime
 
-    createdAt UTCTime SafeToRemove
+--------------------------------------------------------------------------------
+--#FriendRequestNotification#
+
+FriendRequestNotification
+    notification NotificationId
+
+    sentBy UserId -- who sent the friend request
+
+    ignoring Bool -- set to True if a User would like to ignore the friend
+      -- request, which does not cancel it, but prevents it from showing up
+      -- in their pending friend requests tab.
+
+
+--------------------------------------------------------------------------------
+--#ConversationNotification#
+
+ConversationNotification
+    notification NotificationId
+
+    conversation ConversationId
+
 --------------------------------------------------------------------------------
 
 ----------------------------------CONVERSATIONS---------------------------------
