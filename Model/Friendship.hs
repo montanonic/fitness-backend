@@ -1,7 +1,5 @@
-module Model.Friendship (
-      YourId
-    , TheirId
-    , FriendshipException(..)
+module Model.Friendship
+    ( FriendshipException(..)
     , createFriendRequest
     , cancelFriendRequest
     , acceptFriendRequest
@@ -14,7 +12,6 @@ module Model.Friendship (
 
 import Import
 
-import Data.Time.Clock (UTCTime( utctDay ))
 import Data.Time.Calendar (diffDays)
 
 import Model.Persistent (FriendshipAction(..))
@@ -27,6 +24,8 @@ data FriendshipException
     | CannotBeFriendsWithSelf
     | YouWereNotSenderOfRequest
     | RequestAlreadyExists
+    | TooManyRequestsHaveBeenSent
+    | NoFriendRequestExists
     | LastRequestNotExpired
 instance Show FriendshipException where
     show AlreadyFriends = "You are already friends."
@@ -38,6 +37,12 @@ instance Show FriendshipException where
         \ send."
     show RequestAlreadyExists = "There is already a pending friend request\
         \ between these users."
+    show TooManyRequestsHaveBeenSent = "The user has sent more friend requests\
+        \ than allowed for a certain period of time, and must wait to send a\
+        \ new request."
+    show NoFriendRequestExists = "There is currently no friendship request.\
+        \ Either these users do not have a friendship entity between them,\
+        \ or that friendship entity is not flagged as a request."
     show LastRequestNotExpired = "The last friendship request sent by the user\
         \ has not expired yet."
 instance Exception FriendshipException
@@ -47,121 +52,105 @@ instance Exception FriendshipException
 -- ## Basics
 --
 
--- | This is from the perspective of the client calling the function. These
--- types simply make it clearer which Id should go where.
-type YourId = UserId
-type TheirId = UserId
-
--- | Helper combinator function that ensures a specific exception is thrown if a
--- friendship db action is used with a user making themselves the sender and
--- recipient.
-cannotBeFriendswithSelf :: Eq a => (a -> a -> DB b) -> a -> a -> DB b
-cannotBeFriendswithSelf f uid1 uid2
-    | uid1 == uid2 = throwM CannotBeFriendsWithSelf
-    | otherwise = f uid1 uid2
-
-{- Obsolete for now, given extra database overhead. Better implemented manually
-and generalized only if clear pattern emerges.
--- | Helper combinator that throws an exception if the two users given are
--- already friends in the database.
-cannotAlreadyBeFriends :: Eq a => (a -> a -> DB b) -> a -> a -> DB b
-cannotAlreadyBeFriends f uid1 uid2 = do
-    fid <- getUniqueFriendshipId uid1 uid2
-    mfriendshipLog <- get fid
-    case mfriendshipLog of
-        Nothing -> f uid1 uid2
-        Just log ->
--}
-
 -- | This function, along with its Id-only version, queries the database for
 -- the friendship entity corresponding to two users.
 getUniqueFriendship :: UserId -> UserId -> DB (Maybe (Entity Friendship))
-getUniqueFriendship = cannotBeFriendswithSelf f where
-    f uid1 uid2 = selectFirst
-        [ FriendshipFirstUser <-. [uid1, uid2]
-        , FriendshipSecondUser <-. [uid1, uid2] ] []
+getUniqueFriendship uid1 uid2
+    | uid1 == uid2 = throwM CannotBeFriendsWithSelf
+    | otherwise = selectFirst [ FriendshipFirstUser <-. [uid1, uid2]
+                              , FriendshipSecondUser <-. [uid1, uid2] ] []
 
 getUniqueFriendshipId :: UserId -> UserId -> DB (Maybe FriendshipId)
 getUniqueFriendshipId uid1 uid2 =
     (map entityKey) <$> getUniqueFriendship uid1 uid2
 
-
 --
 -- ## Friendship creation / Friend requests.
 --
 
--- | This constant determines how long (in Days) after a friend request is sent
--- and pending before it is automatically cancelled and a new request can be
--- sent. Do keep in mind that the only other way to cancel a friend request is
--- if the original sender chooses to cancel it. Otherwise, you may only ignore
--- it.
-expirationTime :: Integer
-expirationTime = 30 -- about one month
-
 -- | #TODO: add a proper description
-createFriendRequest :: UTCTime -> YourId -> TheirId -> DB ()
+createFriendRequest :: UTCTime -> UserId -> UserId -> DB ()
 createFriendRequest now you them
     | you == them = throwM CannotBeFriendsWithSelf
     | otherwise = do
-        -- create a new Friendship with isRequest flagged as active to signify
-        -- that it is a Friend Request. If a Friendship entity already exists
-        -- between these users, return that existing entity as Left instead of
-        -- creating a new one:
+        -- create a new Friendship entity flagged as a Friend Request. If a
+        -- Friendship entity already exists between these users, return that
+        -- existing entity as Left instead of creating a new one:
         efid <- insertBy $ Friendship you them False True now
         case efid of
             -- new friendship was created
-            Right fid -> logAndNotify now you them fid
+            Right fid -> logAndNotify now you them fid -- see `where` clause
 
             -- friendship already exists
-            Left (Entity fid Friendship{..}) -- current friendship.
+            Left fe@(Entity _ Friendship{..})
                 -- first, we make sure that we don't create a new request if one
                 -- already exists, or if these users are already friends:
                 | friendshipIsActive == True -> throwM AlreadyFriends
                 | friendshipIsRequest == True -> throwM RequestAlreadyExists
-                | otherwise -> do
-                    -- and if those exceptions don't arise, we check the logs to
-                    -- see when the last friend request sent by the current
-                    -- sender was, if ever:
-                    mlog <- selectFirst [ FriendshipLogFriendship ==. fid
-                                        , FriendshipLogUser ==. you
-                                        , FriendshipLogAction ==. SendRequest ]
-                                        [ Desc FriendshipLogCreatedAt ]
-                    case mlog of
-                        -- if there was no previous friend request sent by the
-                        -- current user, then we make one with no further
-                        -- checks:
-                        Nothing -> do
-                            update fid [ FriendshipIsRequest =. True ]
-                            logAndNotify now you them fid
-
-                        -- otherwise, we defer the logic to the
-                        -- `okayToCreateNewFriendRequest` function defined
-                        -- below, which prevents requests from getting sent too
-                        -- often or too rapidly, and warns clients:
-                        Just lastRequest ->
-                            okayToCreateNewFriendRequest lastRequest
+                -- and if those exceptions aren't thrown, we then apply the
+                -- following function, which contains the logic for allowing
+                -- a friend request. See it below for more details.
+                | otherwise -> okayToCreateNewFriendRequest now you them fe
 
     where
-        -- following the modification or creation of the Friendship entity to
-        -- signify a Friend Request is active, we make a log to record that a
-        -- request was made, and then create a notification for the receiver
-        -- of the request.
-        logAndNotify :: UTCTime -> YourId -> TheirId -> FriendshipId -> DB ()
+        -- once we create a Friend Request, we make a log to record that a
+        -- request was made, and then create a notification for the receiver of
+        -- the request.
+        logAndNotify :: UTCTime -> UserId -> UserId -> FriendshipId -> DB ()
         logAndNotify now' you' them' fid' = do
             insert_ $ FriendshipLog fid' you' SendRequest now'
-            createFriendRequestNotification now' you' them'
+            --createFriendRequestNotification now' you' them'
+            -- NOTIFICATIONS CURRENTLY DISABLED
 
-        -- this is where we decide if it's okay to send another Friend Request,
-        -- knowing that this user has sent at least one previous request, the
-        -- latest of which is this function's first parameter.
+        -- this is where we decide if it's okay to send another Friend Request.
+        -- At a certain threshold of sent friend requests (to one user) in a
+        -- particular time window, we prevent new requests from being sent.
+        -- once that threshold is no longer met, a user can send more requests.
         --
-        -- Things this function prevents: #TODO
-        okayToCreateNewFriendRequest :: Entity FriendshipLog -> DB ()
-        okayToCreateNewFriendRequest lastRequest = undefined
+        -- the current threshold is: no more than three requests within one
+        -- month.
+        okayToCreateNewFriendRequest :: UTCTime -> UserId -> UserId ->
+            Entity Friendship -> DB ()
+        okayToCreateNewFriendRequest now' you' them'
+          (Entity fid' Friendship{..}) = do
+            let requestNumberLimit = 3
+            let requestTimeLimit = 30 -- in days
+            logs <- selectList [ FriendshipLogFriendship ==. fid'
+                                , FriendshipLogUser ==. you'
+                                , FriendshipLogAction ==. SendRequest ]
+                                [ Desc FriendshipLogCreatedAt
+                                , LimitTo requestNumberLimit ]
+            case logs of
+                -- no previous requests made by this user (will only actually
+                -- occur when the other user sent the original request, and
+                -- they since have become defriended)
+                [] -> do
+                    update fid' [ FriendshipIsRequest =. True ]
+                    logAndNotify now' you' them' fid'
+                -- previous logs exist
+                x ->
+                  let
+                    getRequestDay = utctDay . friendshipLogCreatedAt . entityVal
+                    latestRequest =  getRequestDay $ headEx x
+                    -- only goes up to the requestLimit, so technically not
+                    -- always the oldest request
+                    oldestRequest = getRequestDay $ lastEx x
+                  in
+                    if diffDays latestRequest oldestRequest
+                        >= requestTimeLimit
+                        -- requests/time is below the limit
+                        then do
+                            -- create friend request, log and notify
+                            update fid' [ FriendshipIsRequest =. True ]
+                            logAndNotify now' you' them' fid'
+                        -- otherwise, requests/time is over the limit, which
+                        -- means that this user cannot send a friend request at
+                        -- this time
+                        else throwM TooManyRequestsHaveBeenSent
 
 
 -- | Needs logic to remove notification from the person you sent the request to.
-cancelFriendRequest :: UTCTime -> YourId -> Entity Friendship -> DB FriendshipId
+cancelFriendRequest :: UTCTime -> UserId -> Entity Friendship -> DB FriendshipId
 cancelFriendRequest now you (Entity fid fship)
     | friendshipFirstUser fship /= you = throwM YouWereNotSenderOfRequest
     | friendshipIsActive fship == True = throwM AlreadyFriends
@@ -170,30 +159,20 @@ cancelFriendRequest now you (Entity fid fship)
         insert_ $ FriendshipLog fid you CancelRequest now
         return fid
 
-{-
--- | Nothing if already friends.
-createFriendRequest :: YourId -> TheirId -> UTCTime -> DB (Maybe FriendshipId)
-createFriendRequest self to now = runMaybeT $ do
-    fid <- MaybeT $ insertUnique $ Friendship self to False now
-    lift $ insert_ $ FriendshipLog fid self SendRequest now
-    return fid
--}
-
-acceptFriendRequest :: FriendshipId -> UTCTime -> DB ()
-acceptFriendRequest fid now = do
-    friendship <- get404 fid
-    if friendshipIsActive friendship == False
+acceptFriendRequest :: UTCTime -> FriendshipId -> DB ()
+acceptFriendRequest now fid = do
+    Friendship{..} <- liftM2 fromMaybe (throwM NoFriendRequestExists) (get fid)
+    when (friendshipIsActive == True) $ throwM AlreadyFriends
+    if friendshipIsRequest
         then do
-            let you = friendshipSecondUser friendship
+            let you = friendshipSecondUser -- 'you' is the current client
             update fid [ FriendshipIsActive =. True ]
             insert_ $ FriendshipLog fid you AcceptRequest now
-        else throwM AlreadyFriends
+        else throwM NoFriendRequestExists
 
--- | Needs to (1) remove notification that you have a friend request, and (2)
--- not change the fact that the friend request is pending for another set
--- period of time, to prevent the user from re-sending, and from knowing the
--- request was rejected.
-ignoreFriendRequest = undefined
+
+ignoreFriendRequest = error "This may end up being a client-side only operation\
+    \, so `ignoreFriendRequest` is being left undefined for now."
 
 
 --

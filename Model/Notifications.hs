@@ -1,7 +1,9 @@
 module Model.Notifications
     ( createFriendRequestNotification
     ) where
-
+-- | NOTE: Notifications are currently low-priority, given the need to integrate
+-- the system with AWS. Efforts will be focused on creating server functionality
+-- for all data structures, and handling Notifications at a later point in time.
 import Import
 
 import Model.Persistent (NotificationType(..))
@@ -30,3 +32,9 @@ createFriendRequestNotification now sender receiver = do
 
 friendshipAcceptedNotification = error "friendshipAcceptedNotification\
     \ is unimplemented"
+
+ignoreFriendshipNotification = error "ignoreFriendshipNotification\
+    \ is unimplemented"
+
+friendRequestWasAccepted :: UTCTime -> UserId -> UserId -> DB ()
+friendRequestWasAccepted now madeReq acceptedReq = do
