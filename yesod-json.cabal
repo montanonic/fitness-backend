@@ -27,6 +27,7 @@ library
                      Import
                      Import.NoFoundation
                      Model
+                     Model.Conversation
                      Model.Friendship
                      Model.Notifications
                      Model.Persistent

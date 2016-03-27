@@ -2,10 +2,9 @@ module Handler.FriendRequest.Cancel where
 
 import Import
 
-import Model.Friendship (TheirId, cancelFriendRequest,
-    getUniqueFriendship)
+import Model.Friendship (cancelFriendRequest, getUniqueFriendship)
 
-postCancelFriendRequestR :: TheirId -> Handler ()
+postCancelFriendRequestR :: UserId -> Handler ()
 postCancelFriendRequestR them = do
     you <- requireAuthId -- see Note.md
     cancel <- liftIO $ cancelFriendRequest <$> getCurrentTime

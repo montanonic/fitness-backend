@@ -37,4 +37,5 @@ ignoreFriendshipNotification = error "ignoreFriendshipNotification\
     \ is unimplemented"
 
 friendRequestWasAccepted :: UTCTime -> UserId -> UserId -> DB ()
-friendRequestWasAccepted now madeReq acceptedReq = do
+friendRequestWasAccepted now madeReq acceptedReq = error
+    "friendRequestWasAccepted is unimplemented"

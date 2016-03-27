@@ -278,7 +278,9 @@ ConversationMessage json
 Conversation json
     createdAt UTCTime -- conversations will be created when a user first sends a
       -- ConversationMessage to one or more users.
-    updatedAt UTCTime Maybe
+
+      
+    updatedAt UTCTime Maybe SafeToRemove
       -- this field will be updated every time a new message is posted to the
       -- conversation.
       -- Depending on how well this works, we may want to get rid of this field
