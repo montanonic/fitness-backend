@@ -51,3 +51,10 @@
 
 /friendRequest/#UserId/create CreateFriendRequestR POST
 /friendRequest/#UserId/cancel CancelFriendRequestR POST
+/friendRequest/#UserId/accept AcceptFriendRequestR POST
+-- /friendRequest/#UserId/reject RejectFriendRequestR POST
+
+
+--
+-- ## Conversations
+--

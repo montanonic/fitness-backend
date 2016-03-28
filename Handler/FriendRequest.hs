@@ -4,3 +4,4 @@ module Handler.FriendRequest
 
 import Handler.FriendRequest.Create as Handler.FriendRequest
 import Handler.FriendRequest.Cancel as Handler.FriendRequest
+import Handler.FriendRequest.Accept as Handler.FriendRequest

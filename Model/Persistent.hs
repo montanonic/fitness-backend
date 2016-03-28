@@ -62,3 +62,12 @@ data NotificationType
     | NewMessage
     deriving (Show, Read, Eq)
 derivePersistField "NotificationType"
+
+--------------------------------------------------------------------------------
+
+data ConversationAction
+    = AddNewConversationUser
+    | ReinviteConversationUser
+    | CreateNewConversation
+    deriving (Show, Read, Eq)
+derivePersistField "ConversationAction"

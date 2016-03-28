@@ -11,6 +11,9 @@ import Import.NoFoundation   as Import
 type DB a = forall (m :: * -> *).
     (MonadIO m, MonadThrow m, Functor m) => SqlPersistT m a
 
+-- Persistent Constraints
+type PC val = (PersistEntity val, PersistEntityBackend val ~ SqlBackend)
+
 -- | Transform a raw string of Text (that is, formatted according to how it
 -- appears in code) as a single string of Text. This allows for using the
 -- multiline string quasiquoters, such as [s| |], to avoid having to add line
@@ -22,4 +25,4 @@ asSingleLine = mconcat . ((++ " ") <$>) . lines
 -- | A version of maybe that takes the Maybe value first. I find my code would
 -- often feel cleaner if I could use that value first.
 maybe' :: Maybe a -> b -> (a -> b) -> b
-maybe' m def f = maybe def f m
+maybe' m b f = maybe b f m

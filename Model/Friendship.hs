@@ -15,7 +15,7 @@ import Import
 import Data.Time.Calendar (diffDays)
 
 import Model.Persistent (FriendshipAction(..))
-import Model.Notifications (createFriendRequestNotification)
+--import Model.Notifications (createFriendRequestNotification)
 
 data FriendshipException
     = AlreadyFriends
@@ -23,6 +23,7 @@ data FriendshipException
     | NeverFriends
     | CannotBeFriendsWithSelf
     | YouWereNotSenderOfRequest
+    | YouWereNotReceiverOfRequest
     | RequestAlreadyExists
     | TooManyRequestsHaveBeenSent
     | NoFriendRequestExists
@@ -35,14 +36,15 @@ instance Show FriendshipException where
             \ least not in this app.)"
     show YouWereNotSenderOfRequest = "You can't cancel a request you didn't\
         \ send."
+    show YouWereNotReceiverOfRequest = "You can't accept a request you didn't\
+        \ receive."
     show RequestAlreadyExists = "There is already a pending friend request\
         \ between these users."
     show TooManyRequestsHaveBeenSent = "The user has sent more friend requests\
         \ than allowed for a certain period of time, and must wait to send a\
         \ new request."
-    show NoFriendRequestExists = "There is currently no friendship request.\
-        \ Either these users do not have a friendship entity between them,\
-        \ or that friendship entity is not flagged as a request."
+    show NoFriendRequestExists = "There is no active friend request between\
+        \ these users."
     show LastRequestNotExpired = "The last friendship request sent by the user\
         \ has not expired yet."
 instance Exception FriendshipException
@@ -54,15 +56,16 @@ instance Exception FriendshipException
 
 -- | This function, along with its Id-only version, queries the database for
 -- the friendship entity corresponding to two users.
-getUniqueFriendship :: UserId -> UserId -> DB (Maybe (Entity Friendship))
+getUniqueFriendship :: UserId -> UserId -> DB (Entity Friendship)
 getUniqueFriendship uid1 uid2
     | uid1 == uid2 = throwM CannotBeFriendsWithSelf
-    | otherwise = selectFirst [ FriendshipFirstUser <-. [uid1, uid2]
-                              , FriendshipSecondUser <-. [uid1, uid2] ] []
+    | otherwise = liftM2 fromMaybe (throwM NeverFriends) $ selectFirst
+        [ FriendshipFirstUser <-. [uid1, uid2]
+        , FriendshipSecondUser <-. [uid1, uid2] ] []
 
-getUniqueFriendshipId :: UserId -> UserId -> DB (Maybe FriendshipId)
+getUniqueFriendshipId :: UserId -> UserId -> DB FriendshipId
 getUniqueFriendshipId uid1 uid2 =
-    (map entityKey) <$> getUniqueFriendship uid1 uid2
+    entityKey <$> getUniqueFriendship uid1 uid2
 
 --
 -- ## Friendship creation / Friend requests.
@@ -150,25 +153,44 @@ createFriendRequest now you them
 
 
 -- | Needs logic to remove notification from the person you sent the request to.
-cancelFriendRequest :: UTCTime -> UserId -> Entity Friendship -> DB FriendshipId
-cancelFriendRequest now you (Entity fid fship)
-    | friendshipFirstUser fship /= you = throwM YouWereNotSenderOfRequest
-    | friendshipIsActive fship == True = throwM AlreadyFriends
+cancelFriendRequest :: UTCTime -> UserId -> Entity Friendship -> DB ()
+cancelFriendRequest now you (Entity fid Friendship{..})
+    | friendshipFirstUser /= you = throwM YouWereNotSenderOfRequest
+    | friendshipIsActive == True = throwM AlreadyFriends
+    | friendshipIsRequest == False = throwM NoFriendRequestExists
     | otherwise = do
         update fid [ FriendshipIsRequest =. False ]
         insert_ $ FriendshipLog fid you CancelRequest now
-        return fid
 
-acceptFriendRequest :: UTCTime -> FriendshipId -> DB ()
-acceptFriendRequest now fid = do
+-- | Convert the given Friendship entity currently functioning as a Friend
+-- Request into an active Friendship with no request.
+-- #TODO: Rewrite this function to accept a FriendshipEntity rather than
+-- a FriendshipId, like cancelFriendRequest, since it's more efficient, and
+-- clear that way.
+acceptFriendRequest :: UTCTime -> UserId -> Entity Friendship -> DB ()
+acceptFriendRequest now you (Entity fid Friendship{..})
+    | friendshipFirstUser /= you = throwM YouWereNotReceiverOfRequest
+    | friendshipIsActive == True = throwM AlreadyFriends
+    | friendshipIsRequest == False = throwM NoFriendRequestExists
+    | otherwise = do
+        update fid [ FriendshipIsActive =. True
+                   , FriendshipIsRequest =. False ]
+        insert_ $ FriendshipLog fid you AcceptRequest now
+
+{-
+acceptFriendRequest :: UTCTime -> UserId -> FriendshipId -> DB ()
+acceptFriendRequest now you fid = do
     Friendship{..} <- liftM2 fromMaybe (throwM NoFriendRequestExists) (get fid)
     when (friendshipIsActive == True) $ throwM AlreadyFriends
     if friendshipIsRequest
         then do
-            let you = friendshipSecondUser -- 'you' is the current client
-            update fid [ FriendshipIsActive =. True ]
+            when (you /= friendshipSecondUser) $
+                throwM YouWereNotReceiverOfRequest
+            update fid [ FriendshipIsActive =. True
+                       , FriendshipIsRequest =. False ]
             insert_ $ FriendshipLog fid you AcceptRequest now
         else throwM NoFriendRequestExists
+-}
 
 
 ignoreFriendRequest = error "This may end up being a client-side only operation\
@@ -183,26 +205,22 @@ ignoreFriendRequest = error "This may end up being a client-side only operation\
 -- never having been friends. Sorted from earliest to latest.
 becameFriends :: UserId -> UserId -> DB [UTCTime]
 becameFriends uid1 uid2 = do
-    mfid <- getUniqueFriendshipId uid1 uid2
-    maybe' mfid (throwM NeverFriends) f
-      where
-        f fid = (map (friendshipLogCreatedAt . entityVal)) <$> selectList
-            [ FriendshipLogFriendship ==. fid
-            , FriendshipLogAction ==. AcceptRequest ]
-            [ Asc FriendshipLogCreatedAt ]
+    fid <- getUniqueFriendshipId uid1 uid2
+    map (friendshipLogCreatedAt . entityVal <$>) $ selectList
+        [ FriendshipLogFriendship ==. fid
+        , FriendshipLogAction ==. AcceptRequest ]
+        [ Asc FriendshipLogCreatedAt ]
 
 -- | Same as becameFriends, but sorted from latest to earliest. These functions
 -- are identical when used on friends who've never defriended one-another, or
 -- users who weren't friends.
 lastBecameFriends :: UserId -> UserId -> DB [UTCTime]
 lastBecameFriends uid1 uid2 = do
-    mfid <- getUniqueFriendshipId uid1 uid2
-    maybe' mfid (throwM NeverFriends) f
-      where
-        f fid = (map (friendshipLogCreatedAt . entityVal)) <$> selectList
-            [ FriendshipLogFriendship ==. fid
-            , FriendshipLogAction ==. AcceptRequest ]
-            [ Desc FriendshipLogCreatedAt ]
+    fid <- getUniqueFriendshipId uid1 uid2
+    map (friendshipLogCreatedAt . entityVal <$>) $ selectList
+        [ FriendshipLogFriendship ==. fid
+        , FriendshipLogAction ==. AcceptRequest ]
+        [ Desc FriendshipLogCreatedAt ]
 
 -- | Returns both the UserId's of a user's friends, but also the Friendship Id
 -- of that particular relation. Returning both may be redundant in some

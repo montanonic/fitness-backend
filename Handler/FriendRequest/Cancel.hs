@@ -7,10 +7,7 @@ import Model.Friendship (cancelFriendRequest, getUniqueFriendship)
 postCancelFriendRequestR :: UserId -> Handler ()
 postCancelFriendRequestR them = do
     you <- requireAuthId -- see Note.md
-    cancel <- liftIO $ cancelFriendRequest <$> getCurrentTime
+    now <- liftIO getCurrentTime
     runDB $ do
-        mfriendshipEnt <- getUniqueFriendship you them
-        case mfriendshipEnt of
-            Nothing -> sendResponseStatus status500
-                            ("No friend request was sent" :: Text)
-            Just friendshipEnt -> void $ cancel you friendshipEnt
+        friendshipEnt <- getUniqueFriendship you them
+        cancelFriendRequest now you friendshipEnt

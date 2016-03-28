@@ -17,6 +17,7 @@ library
                      Foundation
                      Handler.Common
                      Handler.FriendRequest
+                     Handler.FriendRequest.Accept
                      Handler.FriendRequest.Create
                      Handler.FriendRequest.Cancel
                      Handler.Friendships
@@ -58,6 +59,7 @@ library
                 TupleSections
                 RecordWildCards
                 RankNTypes
+                ConstraintKinds
 
     build-depends: base                          >= 4          && < 5
                  , yesod                         >= 1.4.1      && < 1.5
