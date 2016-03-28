@@ -244,7 +244,8 @@ ConversationUser json
       -- See documentation for more information on how this field is used.
 
     createdAt UTCTime
-    updatedAt UTCTime Maybe -- Allowed fields: isActive.
+
+    updatedAt UTCTime Maybe SafeToRemove -- Allowed fields: isActive.
       -- If this field is not null, and isActive is false, the user de-activated
       -- the conversation at this time; if isActive is true, then the user at
       -- one point de-activated the conversation, and re-activated it at this
@@ -264,7 +265,9 @@ ConversationMessage json
     author UserId
 
     createdAt UTCTime
-    updatedAt UTCTime Maybe -- Allowed fields: message(?).
+
+
+    updatedAt UTCTime Maybe SafeToRemove -- Allowed fields: message(?).
         -- non-null entries in this field will indicate the time the last edit
         -- was made to a message (supposing we allow edits)
 
@@ -276,16 +279,47 @@ ConversationMessage json
 -- See the documentation for more information.
 
 Conversation json
-    createdAt UTCTime -- conversations will be created when a user first sends a
-      -- ConversationMessage to one or more users.
+    createdAt UTCTime SafeToRemove -- already logged in ConversationLog
 
-      
+    lastUpdated UTCTime -- shows us how fresh a conversation is, which is
+      -- useful for sorting conversations on the client-side, as we want to sort
+      -- by the activity of a conversation rather than how old it is.
+
+    -- The following two fields are possible efficiency additions:
+    -- latestMessage Text
+    -- writtenBy UserId
+    -- The idea would be to add each new message to the Conversation Entity as
+    -- well, along with who wrote it. This functionality is already a part of
+    -- the ConversationMessage Entity, but by duplicating it here we'd cut down
+    -- on having to query for the latest ConversationMessage when rendering
+    -- a User's active conversations on the app's messaging tab.
+    --
+    -- For now, I'll rely on the querying method, but later on this may be worth
+    -- profiling against the solution outlined above, to decide on the most
+    -- performant implementation.
+
     updatedAt UTCTime Maybe SafeToRemove
       -- this field will be updated every time a new message is posted to the
       -- conversation.
       -- Depending on how well this works, we may want to get rid of this field
       -- entirely and get this information solely from the most recent
       -- ConversationMessage entity.
+
+--------------------------------------------------------------------------------
+--#ConversationLog#
+
+ConversationLog
+    conversation ConversationId
+    user UserId
+
+    action ConversationAction -- Actions: AddNewConversationUser,
+      -- ReinviteConversationUser, CreateNewConversation
+
+    actionTo UserId Maybe -- who was the recipient of the action, if any. needed
+      -- for actions such as AddNewUser and ReinviteUser, which have a causer,
+      -- the ConversationLogUser, and a receiver, ConversationLogActionTo.
+
+    createdAt UTCTime
 
 --------------------------------------------------------------------------------
 

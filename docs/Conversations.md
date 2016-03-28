@@ -14,3 +14,11 @@ From this point, I may request to be a part of the conversation again, and upon
 rejoining (invitation accepted), I will have the previous history, and whatever
 is added from this point, but not what happened in between. I wasn't present,
 and therefore, could not "hear" what happened.
+
+
+## Permissions with adding new users to a conversation
+
+The current implementation makes it so that any active member of a conversation
+can invite other people to it (we might want to make this friends-only?). This
+is a very simplistic system, and we can expand upon it in the future when we
+decide it is too simple.
