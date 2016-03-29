@@ -41,7 +41,10 @@
 -- A user profile. We may modify this to accept a ProfileId instead, or perhaps
 -- be agnostic to either, accepting a UserId or ProfileId; we'll just have to
 -- see how the design grows.
-/profile/#UserId ProfileR GET PUT
+/profile/#UserId BrowseProfileR GET
+
+/profile YourProfileR GET
+!/profile/update UpdateYourProfileR POST
 
 --
 -- ## Friendships

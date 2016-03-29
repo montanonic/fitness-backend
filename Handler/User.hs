@@ -48,7 +48,7 @@ authentication mechanism, please tell me.|]
     -- The resource we link to is for the user's profile, as the
     -- user resource is not intended to be used for anything other
     -- than identifiers and rights management.
-    maybe err (sendResponseCreated . ProfileR) muid
+    maybe err (sendResponseCreated . BrowseProfileR) muid
     -- the newly created user will still need to log-in following this; we'll
     -- leave this responsibility to the clients for now, as our strategy for
     -- authentication is yet to be solidified.

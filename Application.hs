@@ -38,7 +38,8 @@ import Handler.ConversationAddUser
 import Handler.Home
 import Handler.User
 import Handler.UpdateUser
-import Handler.Profile
+import Handler.BrowseProfile
+import Handler.YourProfile
 import Handler.FriendRequest
 import Handler.Friendships
 

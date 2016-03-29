@@ -1,5 +1,5 @@
 module Model.Notifications
-    ( createFriendRequestNotification
+    ( 
     ) where
 -- | NOTE: Notifications are currently low-priority, given the need to integrate
 -- the system with AWS. Efforts will be focused on creating server functionality

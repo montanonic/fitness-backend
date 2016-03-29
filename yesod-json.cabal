@@ -27,7 +27,8 @@ library
                      Handler.Home
                      Handler.User
                      Handler.UpdateUser
-                     Handler.Profile
+                     Handler.BrowseProfile
+                     Handler.YourProfile
                      Import
                      Import.NoFoundation
                      Model

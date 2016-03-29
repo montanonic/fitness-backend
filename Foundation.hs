@@ -130,6 +130,29 @@ instance Yesod App where
     -- new users.
     isAuthorized UserR True = return Authorized -- this should be changed
 
+    isAuthorized (BrowseProfileR _) _ = return Authorized -- #TODO: update this
+        -- route block access according to the queried user's privacy settings.
+
+    isAuthorized (FriendshipsR _) _ = return Authorized -- #TODO: so this might
+        -- actually need a bit more nuance to it. We don't want a user to see
+        -- another user's friendships if that user has decided to keep that
+        -- information private. Hence, this function should fail when accessing
+        -- UserId's whose privacy settings prevent the queryer from seeing those
+        -- relationships.
+    isAuthorized (CreateFriendRequestR _) _ = return Authorized
+    isAuthorized (CancelFriendRequestR _) _ = return Authorized
+    isAuthorized (AcceptFriendRequestR _) _ = return Authorized
+
+
+    -- consider checking to make sure that a user is an active participant of
+    -- a conversation in order to view it. Instead of relying on Model code
+    -- to throw an exception in that case, it makes more sense to move a check
+    -- like that to the Authorization layer.
+    --isAuthorized (ConversationsR cid) _
+    --isAuthorized (ConversationContentsR cid) _
+    --isAuthorized (ConversationAddUserR cid) _
+
+
     -- All other routes require being logged in.
     isAuthorized _ _ = isLoggedIn
 
