@@ -58,3 +58,15 @@
 --
 -- ## Conversations
 --
+
+-- See your active conversations, and create a new one.
+/conversations ConversationsR GET POST
+
+-- View the contents of a conversation, and add a new message.
+/conversations/#ConversationId ConversationContentsR GET POST
+
+-- Currently works on adding people who have either never been a part of the
+-- conversation, or who have since left it. Later versions will require the
+-- consent of the user to rejoin if they have left the conversation, in order
+-- to respect their wishes to not be a part of a conversation.
+/conversations/#ConversationId/add-user/#UserId ConversationAddUserR POST

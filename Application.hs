@@ -32,6 +32,9 @@ import System.Log.FastLogger                (defaultBufSize, newStdoutLoggerSet,
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
 import Handler.Common
+import Handler.Conversations
+import Handler.ConversationContents
+import Handler.ConversationAddUser
 import Handler.Home
 import Handler.User
 import Handler.UpdateUser

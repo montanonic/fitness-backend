@@ -16,6 +16,9 @@ library
     exposed-modules: Application
                      Foundation
                      Handler.Common
+                     Handler.Conversations
+                     Handler.ConversationContents
+                     Handler.ConversationAddUser
                      Handler.FriendRequest
                      Handler.FriendRequest.Accept
                      Handler.FriendRequest.Create

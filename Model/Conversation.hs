@@ -58,8 +58,8 @@ updateConversation now cid = update cid [ ConversationLastUpdated =. now ]
 --
 -- Get all conversations that the given User is currently active in, in order
 -- from when the conversation last had activity.
-getConversations :: UserId -> DB [ConversationId]
-getConversations you = map (unValue <$>) $
+getConversationIds :: UserId -> DB [ConversationId]
+getConversationIds you = map (unValue <$>) $
     select $ from $ \(cu `InnerJoin` c) -> do
         on_ $ cu ^. ConversationUserConversation .==. c ^. ConversationId
         where_ $ cu ^. ConversationUserUser .==. val you
@@ -82,8 +82,10 @@ addMessage now cid you content = do
             updateConversation now cid
         else throwM NotMemberOfConversation
 
-getConversationMessages :: UserId -> ConversationId
-    -> DB [ConversationMessage]
+-- | #NOTE: It may be worth moving the isParticipantOfConversation check out
+-- to the authentication layer instead of within this function. Time will tell
+-- which way makes more sense.
+getConversationMessages :: UserId -> ConversationId -> DB [ConversationMessage]
 getConversationMessages you cid = do
     unlessM (isParticipantOfConversation cid you)
         $ throwM NotMemberOfConversation
@@ -124,6 +126,11 @@ isParticipantOfConversation cid uid = do
 -- | Adds a new user to an existing conversation, or reinvite them if they've
 -- gone inactive. The first UserId, the inviter, must already be a member of the
 -- conversation for this action to carry out.
+--
+-- #TODO: This function should *not* re-add a user who has since left a
+-- conversation without their consent to rejoin. We should therefore probaly
+-- have two functions; one for adding a new user, and one for reinviting
+-- someone. The priority isn't very high on this, but it must be done.
 addUser :: UTCTime -> ConversationId -> UserId -> UserId -> DB ()
 addUser now cid you them = do
     participants <- queryConversationUserIds cid
