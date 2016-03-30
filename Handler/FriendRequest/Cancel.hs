@@ -8,6 +8,4 @@ postCancelFriendRequestR :: UserId -> Handler ()
 postCancelFriendRequestR them = do
     you <- requireAuthId -- see Note.md
     now <- liftIO getCurrentTime
-    runDB $ do
-        friendshipEnt <- getUniqueFriendship you them
-        cancelFriendRequest now you friendshipEnt
+    runDB $ cancelFriendRequest now you them

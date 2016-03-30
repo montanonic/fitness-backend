@@ -1,14 +1,23 @@
 module Model.Friendship
-    ( FriendshipException(..)
-    , createFriendRequest
-    , cancelFriendRequest
-    , acceptFriendRequest
-    , getUniqueFriendship
-    , getUniqueFriendshipId
-    , becameFriends
-    , lastBecameFriends
-    , listFriendIds
+    ( module Model.Friendship
     ) where
+
+{- I've decided that explicit exports aren't really necessary for this module,
+or honestly, *any* of the Model modules.
+
+Old exports:
+
+FriendshipException(..)
+, createFriendRequest
+, cancelFriendRequest
+, acceptFriendRequest
+, getUniqueFriendship
+, getUniqueFriendshipId
+, becameFriends
+, lastBecameFriends
+, listFriendIds
+
+-}
 
 import Import
 
@@ -59,7 +68,7 @@ instance Exception FriendshipException
 getUniqueFriendship :: UserId -> UserId -> DB (Entity Friendship)
 getUniqueFriendship uid1 uid2
     | uid1 == uid2 = throwM CannotBeFriendsWithSelf
-    | otherwise = liftM2 fromMaybe (throwM NeverFriends) $ selectFirst
+    | otherwise = fromMaybeM (throwM NeverFriends) $ selectFirst
         [ FriendshipFirstUser <-. [uid1, uid2]
         , FriendshipSecondUser <-. [uid1, uid2] ] []
 
@@ -68,7 +77,7 @@ getUniqueFriendshipId uid1 uid2 =
     entityKey <$> getUniqueFriendship uid1 uid2
 
 --
--- ## Friendship creation / Friend requests.
+-- ## Friend requests.
 --
 
 -- | #TODO: add a proper description
@@ -101,7 +110,7 @@ createFriendRequest now you them
         -- the request.
         logAndNotify :: UTCTime -> UserId -> UserId -> FriendshipId -> DB ()
         logAndNotify now' you' them' fid' = do
-            insert_ $ FriendshipLog fid' you' SendRequest now'
+            insert_ $ FriendshipLog fid' you' CreateRequest now'
             --createFriendRequestNotification now' you' them'
             -- NOTIFICATIONS CURRENTLY DISABLED
 
@@ -120,7 +129,7 @@ createFriendRequest now you them
             let requestTimeLimit = 30 -- in days
             logs <- selectList [ FriendshipLogFriendship ==. fid'
                                 , FriendshipLogUser ==. you'
-                                , FriendshipLogAction ==. SendRequest ]
+                                , FriendshipLogAction ==. CreateRequest ]
                                 [ Desc FriendshipLogCreatedAt
                                 , LimitTo requestNumberLimit ]
             case logs of
@@ -153,8 +162,13 @@ createFriendRequest now you them
 
 
 -- | Needs logic to remove notification from the person you sent the request to.
-cancelFriendRequest :: UTCTime -> UserId -> Entity Friendship -> DB ()
-cancelFriendRequest now you (Entity fid Friendship{..})
+cancelFriendRequest :: UTCTime -> UserId -> UserId -> DB ()
+cancelFriendRequest now you them = do
+    friendshipEnt <- getUniqueFriendship you them
+    cancelFriendRequest' now you friendshipEnt
+
+cancelFriendRequest' :: UTCTime -> UserId -> Entity Friendship -> DB ()
+cancelFriendRequest' now you (Entity fid Friendship{..})
     | friendshipFirstUser /= you = throwM YouWereNotSenderOfRequest
     | friendshipIsActive == True = throwM AlreadyFriends
     | friendshipIsRequest == False = throwM NoFriendRequestExists
@@ -167,9 +181,14 @@ cancelFriendRequest now you (Entity fid Friendship{..})
 -- #TODO: Rewrite this function to accept a FriendshipEntity rather than
 -- a FriendshipId, like cancelFriendRequest, since it's more efficient, and
 -- clear that way.
-acceptFriendRequest :: UTCTime -> UserId -> Entity Friendship -> DB ()
-acceptFriendRequest now you (Entity fid Friendship{..})
-    | friendshipFirstUser /= you = throwM YouWereNotReceiverOfRequest
+acceptFriendRequest :: UTCTime -> UserId -> UserId -> DB ()
+acceptFriendRequest now you them = do
+    friendshipEnt <- getUniqueFriendship you them
+    acceptFriendRequest' now you friendshipEnt
+
+acceptFriendRequest' :: UTCTime -> UserId -> Entity Friendship -> DB ()
+acceptFriendRequest' now you (Entity fid Friendship{..})
+    | friendshipFirstUser == you = throwM YouWereNotReceiverOfRequest
     | friendshipIsActive == True = throwM AlreadyFriends
     | friendshipIsRequest == False = throwM NoFriendRequestExists
     | otherwise = do
@@ -196,10 +215,22 @@ acceptFriendRequest now you fid = do
 ignoreFriendRequest = error "This may end up being a client-side only operation\
     \, so `ignoreFriendRequest` is being left undefined for now."
 
+--
+-- ## Friendship
+--
 
---
--- ## Friendship Querying
---
+defriend :: UTCTime -> UserId -> UserId -> DB ()
+defriend now you them = do
+    friendshipEnt <- getUniqueFriendship you them
+    defriend' now you friendshipEnt
+
+defriend' :: UTCTime -> UserId -> Entity Friendship -> DB ()
+defriend' now you (Entity fid Friendship{..})
+    | friendshipIsActive == False = throwM NotCurrentlyFriends
+    | otherwise = do
+        update fid [ FriendshipIsActive =. False ]
+        insert_ $ FriendshipLog fid you Defriend now
+
 
 -- | Shows each time a pair of Users became friends. Null represents them
 -- never having been friends. Sorted from earliest to latest.

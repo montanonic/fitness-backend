@@ -8,6 +8,5 @@ postAcceptFriendRequestR :: UserId -> Handler ()
 postAcceptFriendRequestR them = do
     you <- requireAuthId
     now <- liftIO getCurrentTime
-    runDB $ do
-        friendshipEnt <- getUniqueFriendship them you
-        acceptFriendRequest now you friendshipEnt
+    runDB $ acceptFriendRequest now you them
+    sendResponse ("You are now friends." :: Text)

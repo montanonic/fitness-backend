@@ -1,4 +1,6 @@
-module Model.User where
+module Model.User
+    ( module Model.User
+    ) where
 
 import Import
 import Control.Error

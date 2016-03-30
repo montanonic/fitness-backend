@@ -14,6 +14,13 @@ import Text.Shakespeare.Text (st)
 import Yesod.Default.Config2 (ignoreEnv, loadAppSettings)
 import Yesod.Test            as X
 
+import Network.Wai.Test as TestImport (SResponse(..))
+import Data.Aeson as TestImport (encode, decode)
+import Yesod.Persist.Core as TestImport (getBy404, get404)
+
+
+
+
 -- | Actions which only require access to the database connection can be given
 --   type @DB a@ (as opposed to @YesodDB App a@). This allows them to also be
 --   called in tests.

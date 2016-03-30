@@ -4,10 +4,6 @@ module Handler.UserAndProfileSpec (spec) where
 -- entities are created at the same time.
 
 import TestImport
-import Data.Aeson (encode, decode)
-import Yesod.Persist.Core (getBy404, get404)
-import Network.Wai.Test (SResponse(..))
-import Yesod.Auth (requireAuthId)
 
 import Model.User (UserAndProfile(..), createUserAndProfile)
 import Utilities (buildUserAndProfile, authenticateAs, createNewUserAndProfile
@@ -43,11 +39,34 @@ spec = withApp $ do
                 (dbUserAndProfile (entityVal user) (entityVal profile))
                 (userAndProfile)
 
+        it "gives a 500 if creating a user with a non-unique indent" $ do
+            let identifier = "dumdum"
+            let userAndProfile1 =
+                    (buildUserAndProfile 1) { ident = identifier }
+
+            let userAndProfile2 =
+                    (buildUserAndProfile 1) { ident = identifier }
+
+            request $ do
+                setMethod "POST"
+                setUrl UserR
+                setRequestBody $ encode userAndProfile1
+
+            statusIs 201
+
+            request $ do
+                setMethod "POST"
+                setUrl UserR
+                setRequestBody $ encode userAndProfile2
+
+            statusIs 500
+
+
     describe "getUserR" $ do
         let msg = "gives a 303 when user is not authenticated/logged-in, "
                 ++ "redirecting them to log in"
         it msg $ do
-            (user, _) <- createNewUserAndProfile
+            (_, user) <- createNewUserAndProfile 1
 
             getJson UserR
 
@@ -56,7 +75,7 @@ spec = withApp $ do
         let msg = "gives a 200 when user is authenticated, and the query result"
                 ++ " is equal to the user record originally inserted into the DB"
         it msg $ do
-            (user, _) <- createNewUserAndProfile
+            (_, user) <- createNewUserAndProfile 1
 
             authenticateAs user
 
@@ -69,16 +88,13 @@ spec = withApp $ do
                 ++ " createNewUserAndProfile")
                 (decode $ simpleBody r) (Just user)
 
-{-
-    describe "getProfileR" $ do
+
+    describe "getYourProfileR" $ do
         it "returns a 200" $ do
-            (user, _) <- createNewUserAndProfile
+            (_, user) <- createNewUserAndProfile 1
 
             authenticateAs user
 
-            uid <- requireAuthId
-
-            get (ProfileR uid)
+            get YourProfileR
 
             statusIs 200
--}

@@ -15,6 +15,8 @@ library
     hs-source-dirs: ., app
     exposed-modules: Application
                      Foundation
+                     EsqueletoLocal
+                     GHCiTesting
                      Handler.Common
                      Handler.Conversations
                      Handler.ConversationContents
@@ -23,10 +25,10 @@ library
                      Handler.FriendRequest.Accept
                      Handler.FriendRequest.Create
                      Handler.FriendRequest.Cancel
+                     Handler.Defriend
                      Handler.Friendships
                      Handler.Home
                      Handler.User
-                     Handler.UpdateUser
                      Handler.BrowseProfile
                      Handler.YourProfile
                      Import
@@ -122,9 +124,11 @@ test-suite test
     main-is:           Spec.hs
     hs-source-dirs:    test
     ghc-options:       -Wall
-
+    
     other-modules: Handler.CommonSpec
                    Handler.UserAndProfileSpec
+                   Handler.FriendshipSpec
+                   Handler.ConversationSpec
                    TestImport
                    Utilities
 

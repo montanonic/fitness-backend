@@ -41,7 +41,9 @@ User json
 UserLog
     user UserId
 
-    update UserUpdate -- UpdateIdent, UpdateEmail, UpdatePassword
+    action UserUpdate -- UpdateIdent, UpdateEmail, UpdatePassword
+
+    update UserUpdate SafeToRemove
 
     createdAt UTCTime
 
@@ -164,6 +166,7 @@ Friendship json
       -- the possibility of the secondUser sending a friend request to the
       -- first, which wouldn't make any sense.
 
+    deriving Show
 --------------------------------------------------------------------------------
 --#FriendshipLog# ; data: FriendshipAction
 
@@ -175,7 +178,7 @@ FriendshipLog
     friendship FriendshipId
     user UserId -- who performed the action
 
-    action FriendshipAction -- SendRequest, CancelRequest, AcceptRequest,
+    action FriendshipAction -- CreateRequest, CancelRequest, AcceptRequest,
       -- RejectRequest, or Defriend.
 
     createdAt UTCTime

@@ -38,24 +38,32 @@
 -- ## Profile
 --
 
+/profile YourProfileR GET
+/profile/update UpdateYourProfileR POST
+
 -- A user profile. We may modify this to accept a ProfileId instead, or perhaps
 -- be agnostic to either, accepting a UserId or ProfileId; we'll just have to
 -- see how the design grows.
-/profile/#UserId BrowseProfileR GET
-
-/profile YourProfileR GET
-!/profile/update UpdateYourProfileR POST
+!/profile/#UserId BrowseProfileR GET
 
 --
 -- ## Friendships
 --
 
+-- for viewing another any user's friends, so long as the permissions settings
+-- allow it
 /user/#UserId/friendships FriendshipsR GET
 
-/friendRequest/#UserId/create CreateFriendRequestR POST
-/friendRequest/#UserId/cancel CancelFriendRequestR POST
-/friendRequest/#UserId/accept AcceptFriendRequestR POST
--- /friendRequest/#UserId/reject RejectFriendRequestR POST
+-- View your relationship with a particular friend; low priority to implement
+-- /friendship/#UserId/friendships/#UserId GET
+
+-- Remove the given user as your friend.
+/friendship/#UserId/defriend DefriendR POST
+
+/friend-request/#UserId/create CreateFriendRequestR POST
+/friend-request/#UserId/cancel CancelFriendRequestR POST
+/friend-request/#UserId/accept AcceptFriendRequestR POST
+-- /friend-request/#UserId/reject RejectFriendRequestR POST
 
 
 --

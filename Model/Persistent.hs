@@ -5,7 +5,7 @@ import Database.Persist.TH
 import Data.Aeson.TH
 
 data FriendshipAction
-    = SendRequest
+    = CreateRequest
     | CancelRequest
     | AcceptRequest
     | RejectRequest

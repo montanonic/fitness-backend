@@ -23,9 +23,18 @@ asSingleLine :: Text -> Text
 asSingleLine = mconcat . ((++ " ") <$>) . lines
 
 --
--- * Monads and Maybe utilities, courtesy of
+-- ## Maybe utilities, courtesy of
 -- http://haddock.stackage.org/lts-5.9/Agda-2.4.2.5/src/Agda-Utils-Maybe.html#fromMaybeM
 --
+
+-- | Version of 'maybe' with different argument ordering.
+--   Often, we want to case on a 'Maybe', do something interesting
+--   in the 'Just' case, but only a default action in the 'Nothing'
+--   case.  Then, the argument ordering of @caseMaybe@ is preferable.
+--
+--   @caseMaybe m d f = flip (maybe d) m f@
+caseMaybe :: Maybe a -> b -> (a -> b) -> b
+caseMaybe m d f = maybe d f m
 
 -- | Monadic version of 'maybe'.
 
