@@ -170,3 +170,4 @@ test-suite test
                  , yesod-persistent
                  , wai-extra
                  , http-types
+                 , raw-strings-qq

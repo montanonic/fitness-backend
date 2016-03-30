@@ -69,9 +69,6 @@ spec = withApp $ do
             (_, user) <- createNewUserAndProfile 1
 
             getJson UserR
-
-            withResponse print
-
             statusIs 401
 
         let msg = "gives a 200 when user is authenticated, and the query result"

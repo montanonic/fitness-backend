@@ -125,13 +125,19 @@ createFriendRequest now you them
             Entity Friendship -> DB ()
         okayToCreateNewFriendRequest now' you' them'
           (Entity fid' Friendship{..}) = do
+            -- you can send more requests than the requestLimit, but not within
+            -- the requestLimitTimeWindow. Once the oldest of last three Friend
+            -- requests is older than the time window, you can create another
+            -- request.
             let requestLimit = 3
-            let requestLimitWindow = 30 -- in days
+                requestLimitTimeWindow = 30 -- in days
+                today = utctDay now'
             logs <- selectList [ FriendshipLogFriendship ==. fid'
                                 , FriendshipLogUser ==. you'
                                 , FriendshipLogAction ==. CreateRequest ]
                                 [ Desc FriendshipLogCreatedAt
                                 , LimitTo requestLimit ]
+            -- #TODO: takeUntil time is > 30 days ago
             case logs of
                 -- no previous requests made by this user (will only actually
                 -- occur when the other user sent the original request, and
@@ -143,13 +149,12 @@ createFriendRequest now you them
                 x ->
                   let
                     getRequestDay = utctDay . friendshipLogCreatedAt . entityVal
-                    latestRequest =  getRequestDay $ headEx x
-                    -- only goes up to the requestLimit, so technically not
-                    -- always the oldest request
-                    oldestRequest = getRequestDay $ lastEx x
-                    window = diffDays latestRequest oldestRequest
+                    oldestOfLastThreeRequests = getRequestDay $ lastEx x
+                    today = utctDay now'
+                    daysSinceOldestRequest =
+                        diffDays today oldestOfLastThreeRequests
                   in
-                    if window < requestLimitWindow
+                    if daysSinceOldestRequest < requestLimitTimeWindow
                         -- requests/time is below the limit
                         then do
                             -- create friend request, log and notify
