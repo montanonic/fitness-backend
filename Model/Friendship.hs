@@ -125,13 +125,13 @@ createFriendRequest now you them
             Entity Friendship -> DB ()
         okayToCreateNewFriendRequest now' you' them'
           (Entity fid' Friendship{..}) = do
-            let requestNumberLimit = 3
-            let requestTimeLimit = 30 -- in days
+            let requestLimit = 3
+            let requestLimitWindow = 30 -- in days
             logs <- selectList [ FriendshipLogFriendship ==. fid'
                                 , FriendshipLogUser ==. you'
                                 , FriendshipLogAction ==. CreateRequest ]
                                 [ Desc FriendshipLogCreatedAt
-                                , LimitTo requestNumberLimit ]
+                                , LimitTo requestLimit ]
             case logs of
                 -- no previous requests made by this user (will only actually
                 -- occur when the other user sent the original request, and
@@ -147,9 +147,9 @@ createFriendRequest now you them
                     -- only goes up to the requestLimit, so technically not
                     -- always the oldest request
                     oldestRequest = getRequestDay $ lastEx x
+                    window = diffDays latestRequest oldestRequest
                   in
-                    if diffDays latestRequest oldestRequest
-                        >= requestTimeLimit
+                    if window < requestLimitWindow
                         -- requests/time is below the limit
                         then do
                             -- create friend request, log and notify

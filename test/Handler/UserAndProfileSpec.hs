@@ -63,14 +63,16 @@ spec = withApp $ do
 
 
     describe "getUserR" $ do
-        let msg = "gives a 303 when user is not authenticated/logged-in, "
-                ++ "redirecting them to log in"
-        it msg $ do
+
+        it ("gives a 401 when user is not authenticated/logged-in, returning"
+                ++ "JSON with a link showing where to log in") $ do
             (_, user) <- createNewUserAndProfile 1
 
             getJson UserR
 
-            statusIs 303
+            withResponse print
+
+            statusIs 401
 
         let msg = "gives a 200 when user is authenticated, and the query result"
                 ++ " is equal to the user record originally inserted into the DB"
@@ -79,7 +81,7 @@ spec = withApp $ do
 
             authenticateAs user
 
-            get UserR
+            getJson UserR
 
             statusIs 200
 
@@ -95,6 +97,6 @@ spec = withApp $ do
 
             authenticateAs user
 
-            get YourProfileR
+            getJson YourProfileR
 
             statusIs 200

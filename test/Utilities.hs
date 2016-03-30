@@ -12,6 +12,7 @@ import Yesod.Persist.Core (getBy404, get404)
 import Yesod.Core (Yesod)
 import Yesod.Core.Handler (RedirectUrl)
 import Yesod.Auth (Route( PluginR, LogoutR ))
+import Network.HTTP.Types.Header (hAccept)
 
 import Model.Persistent (Gender(..))
 import Model.User (UserAndProfile(..), createUserAndProfile)
@@ -24,7 +25,13 @@ import Model.Friendship (createFriendRequest, acceptFriendRequest)
 getJson :: (Yesod site, RedirectUrl site url) => url -> YesodExample site ()
 getJson url = request $ do
     setMethod "GET"
-    addGetParam "Accept" "application/json"
+    addRequestHeader (hAccept, "application/json")
+    setUrl url
+
+postJson :: (Yesod site, RedirectUrl site url) => url -> YesodExample site ()
+postJson url = request $ do
+    setMethod "POST"
+    addRequestHeader (hAccept, "application/json")
     setUrl url
 
 --

@@ -19,43 +19,39 @@ spec = withApp $ do
 
             authenticateAs you
 
-            post (CreateFriendRequestR theirId)
+            postJson (CreateFriendRequestR theirId)
 
             return (e1, e2)
 
-        it "gives a 303 when not authenticated" $ do
+        it "gives a 401 when not authenticated" $ do
             _ <- createNewUserAndProfile 1
             (theirId, _) <- createNewUserAndProfile 2
 
-            post (CreateFriendRequestR theirId)
+            postJson (CreateFriendRequestR theirId)
 
-            statusIs 303
+            statusIs 401
 
         it "gives a 500 if attempting to friend self" $ do
             (uid, user) <- createNewUserAndProfile 1
 
             authenticateAs user
 
-            post (CreateFriendRequestR uid)
+            postJson (CreateFriendRequestR uid)
 
             statusIs 500
-
-        it "gives a 200 when used on another user" $ do
-            createRequest
-
-            statusIs 200
 
         it "gives a 500 when already friends" $ do
             (Entity _ you, Entity theirId _) <- createRequest
 
             authenticateAs you
 
-            post (CreateFriendRequestR theirId)
+            postJson (CreateFriendRequestR theirId)
 
             statusIs 500
 
-        it "properly creates a Friendship entity" $ do
-            (Entity yourId you, Entity theirId them) <- createRequest
+        it ("when used on another user, it properly creates a Friendship entity"
+            ++ "and a FriendshipLog with the correct action") $ do
+            (Entity yourId _, Entity theirId _) <- createRequest
 
             (Entity _ Friendship{..}) <- runDB $
                 getUniqueFriendship yourId theirId
@@ -65,11 +61,10 @@ spec = withApp $ do
                 (friendshipFirstUser, friendshipSecondUser)
                 (yourId             , theirId             )
 
-            assertEqual "friendship created is not active and set as a request"
-                (friendshipIsActive, friendshipIsRequest) (False, True)
-
-        it "properly creates a log" $ do
-            (Entity yourId you, Entity theirId _) <- createRequest
+            assertEqual ("friendship created is not active, and is set as a"
+                ++ "request")
+                (friendshipIsActive, friendshipIsRequest)
+                (False             , True               )
 
             mlog <- runDB $ do
                 fid <- getUniqueFriendshipId yourId theirId
@@ -78,9 +73,19 @@ spec = withApp $ do
                     , FriendshipLogAction ==. CreateRequest ]
                     []
 
-            assertEqual "the correct log exists"
+            assertEqual "a log recording the CreateRequest action was created"
                 (isJust mlog)
                 True
+
+        it ("gives a 200 when sending another request after cancelling the"
+            ++ "previous one") $ do
+            (_, Entity theirId _) <- createRequest
+
+            postJson (CancelFriendRequestR theirId)
+            statusIs 200
+
+            postJson (CreateFriendRequestR theirId)
+            statusIs 200
 
         it "won't let you send more than 3 requests" $ do
             (Entity _ you) <- createNewUserAndProfileEnt 1
@@ -89,20 +94,20 @@ spec = withApp $ do
             authenticateAs you
 
             -- first
-            post (CreateFriendRequestR theirId)
-            post (CancelFriendRequestR theirId)
+            postJson (CreateFriendRequestR theirId)
+            postJson (CancelFriendRequestR theirId)
             -- second
-            post (CreateFriendRequestR theirId)
-            post (CancelFriendRequestR theirId)
+            postJson (CreateFriendRequestR theirId)
+            postJson (CancelFriendRequestR theirId)
             -- should be okay here
             statusIs 200
 
             -- should be able to create a third request
-            post (CreateFriendRequestR theirId)
+            postJson (CreateFriendRequestR theirId)
             statusIs 200
 
             -- should be able to cancel a third time as well
-            post (CancelFriendRequestR theirId)
+            postJson (CancelFriendRequestR theirId)
 
     describe "postAcceptFriendRequestR" $ do
         let createAndAcceptRequest = do
@@ -111,11 +116,11 @@ spec = withApp $ do
 
             authenticateAs you
 
-            post (CreateFriendRequestR theirId)
+            postJson (CreateFriendRequestR theirId)
 
             authenticateAs them
 
-            post (AcceptFriendRequestR yourId)
+            postJson (AcceptFriendRequestR yourId)
 
             return (e1, e2)
 
@@ -125,11 +130,11 @@ spec = withApp $ do
 
             authenticateAs you
 
-            post (CreateFriendRequestR theirId)
+            postJson (CreateFriendRequestR theirId)
 
             logout
 
-            post (AcceptFriendRequestR yourId)
+            postJson (AcceptFriendRequestR yourId)
 
 
         it "gives a 500 when no request exists" $ do
@@ -138,7 +143,7 @@ spec = withApp $ do
 
             authenticateAs you
 
-            post (AcceptFriendRequestR theirId)
+            postJson (AcceptFriendRequestR theirId)
 
             statusIs 500
 
@@ -179,7 +184,7 @@ spec = withApp $ do
 
             authenticateAs you
 
-            post (CreateFriendRequestR theirId)
+            postJson (CreateFriendRequestR theirId)
 
             return (e1, e2)
 
@@ -189,13 +194,31 @@ spec = withApp $ do
 
             authenticateAs you
 
-            post (CancelFriendRequestR theirId)
+            postJson (CancelFriendRequestR theirId)
 
             statusIs 500
 
-        it "gives a 200 when you cancel a request you sent" $ do
+        it ("correctly cancels a request you sent, including logging that it"
+            ++ "did so") $ do
             (Entity yourId you, Entity theirId them) <- createRequest
 
-            post (CancelFriendRequestR theirId)
-
+            postJson (CancelFriendRequestR theirId)
             statusIs 200
+
+            (Friendship{..}, logs) <- runDB $ do
+                (Entity fid fe) <-
+                    getUniqueFriendship yourId theirId
+
+                logs <- map (friendshipLogAction . entityVal) <$> selectList
+                    [ FriendshipLogFriendship ==. fid
+                    , FriendshipLogAction ==. CancelRequest ] []
+
+                return (fe, logs)
+
+            assertEqual "cancel request was logged"
+                logs
+                [CancelRequest]
+
+            assertEqual "cancel request properly modified the friendship entity"
+                (friendshipIsActive, friendshipIsRequest)
+                (False             , False              )

@@ -124,7 +124,7 @@ test-suite test
     main-is:           Spec.hs
     hs-source-dirs:    test
     ghc-options:       -Wall
-    
+
     other-modules: Handler.CommonSpec
                    Handler.UserAndProfileSpec
                    Handler.FriendshipSpec
@@ -169,3 +169,4 @@ test-suite test
                  , yesod-auth
                  , yesod-persistent
                  , wai-extra
+                 , http-types

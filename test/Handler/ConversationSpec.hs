@@ -15,7 +15,7 @@ spec = withApp $ do
 
             authenticateAs user
 
-            get ConversationsR
+            getJson ConversationsR
 
             statusIs 200
 

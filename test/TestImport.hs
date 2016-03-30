@@ -17,8 +17,7 @@ import Yesod.Test            as X
 import Network.Wai.Test as TestImport (SResponse(..))
 import Data.Aeson as TestImport (encode, decode)
 import Yesod.Persist.Core as TestImport (getBy404, get404)
-
-
+import Yesod.Core as TestImport
 
 
 -- | Actions which only require access to the database connection can be given
