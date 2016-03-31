@@ -26,8 +26,7 @@ instance Exception ConversationException
 
 -- | This function is used to initiate a new conversation, tying participants
 -- and messages to a new Conversation entity.
-createNewConversation :: UTCTime -> UserId -> [UserId] -> Text
-    -> DB ConversationId
+createNewConversation :: UTCTime -> UserId -> [UserId] -> Text -> DB ()
 createNewConversation now you them msgContent = do
     cid <- insert $ Conversation now
     -- log that a new conversation was created and who created it
@@ -45,7 +44,6 @@ createNewConversation now you them msgContent = do
     -- time, we do not need to create logs to query who the initial conversation
     -- participants were.
     addMessage now cid you msgContent
-    return cid
 
 -- Updates the Conversation entity to reflect that there is a new message or
 -- user. This information is useful for client-side code, as it allows the
@@ -75,15 +73,15 @@ getConversationIds you = map (unValue <$>) $
 -- that conversation.
 addMessage :: UTCTime -> ConversationId -> UserId -> Text -> DB ()
 addMessage now cid you content = do
-    res <- isParticipantOfConversation cid you
-    if res
+    isParticipant <- isParticipantOfConversation cid you
+    if isParticipant
         then do
             insert_ $ ConversationMessage cid content you now
             updateConversation now cid
         else throwM NotMemberOfConversation
 
 -- | #NOTE: It may be worth moving the isParticipantOfConversation check out
--- to the authentication layer instead of within this function. Time will tell
+-- to the authorization layer instead of within this function. Time will tell
 -- which way makes more sense.
 getConversationMessages :: UserId -> ConversationId -> DB [ConversationMessage]
 getConversationMessages you cid = do

@@ -19,4 +19,5 @@ postConversationsR = do
     (msg, them) <- requireJsonBody :: Handler (Text, [UserId])
     you <- requireAuthId
     now <- liftIO getCurrentTime
-    void $ runDB $ createNewConversation now you them msg
+    runDB $ createNewConversation now you them msg
+    sendResponse ("New conversation created." :: Text)

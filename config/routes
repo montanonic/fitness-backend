@@ -25,6 +25,14 @@
 -- elsewhere.
 
 --
+-- ## Development (routes that should only be used for testing)
+--
+
+-- the inputted text should be the user ident; this is obviously *extremely*
+-- unsafe, but fine for development.
+-- /login/#Text SimpleLoginR POST
+
+--
 -- ## User
 --
 
@@ -81,3 +89,9 @@
 -- consent of the user to rejoin if they have left the conversation, in order
 -- to respect their wishes to not be a part of a conversation.
 /conversations/#ConversationId/add-user/#UserId ConversationAddUserR POST
+
+--
+-- ## Wall Posts and Comments (AKA Newsfeed)
+--
+
+-- /wall/#UserId WallR GET POST

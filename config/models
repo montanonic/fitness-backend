@@ -329,35 +329,37 @@ ConversationLog
 --------------------------------NEWS FEED / WALLS-------------------------------
 
 --------------------------------------------------------------------------------
---#Like#
+--#WallMessage#
 
--- LIKES should just be an Int accumulator on a wall post or comment. They
--- should NOT be their own entity. That said, when a user likes and dislikes
--- a post (along with that history) should be logged.
+-- | So this is a new model idea for wall posts and comments, since each
+-- basically represents almost the exact same information, and are
+-- interchangeable except for the Wall Post is a parent to the Wall Comments.
 
-Like json
-    liker UserId
+WallMessage
+    profile ProfileId Maybe -- wall posts are linked to a profile, most commonly
+      -- to the user's own profile. Wall comments do not use this field.
+    parent WallMessageId Maybe -- to link comments to a post; Nothing signifies
+      -- that this is a Wall Post, Just wmid indicates that this is a comment
+      -- on the Wall Post referenced by wmid.
 
-    -- The following does not seem to be the most elegant solution to the
-    -- problem of connecting a Like to either a Post or a PostComment.
+    author UserId
 
-    -- RULE: A Like can refer to EITHER a Post or a PostComment. Hence, one of
-    -- these fields must remain NULL.
-    post WallPostId Maybe
-    comment PostCommentId Maybe
+    content Text
+
+    likeCount Int
+    whoLiked [UserId]
 
     createdAt UTCTime
 
 --------------------------------------------------------------------------------
---#PostComment#
+--#WallComment#
 
--- | I know this sounds like an action but it is not; it should be read as a
--- noun, not a verb. This table references Post Comments to an actual WallPost
--- (identified by the WallPost table). This is a many-to-one relationship.
+-- | This table references Wall Comments to an actual WallPost (identified by
+-- the WallPost table). This is a many-to-one relationship.
 
 -- Currently lacks support for Media types.
 
-PostComment json
+WallPostComment json
     post WallPostId
     content Text
     author UserId
@@ -370,7 +372,9 @@ PostComment json
       -- Post itself.
 
     createdAt UTCTime
-    updatedAt UTCTime Maybe -- Allowed fields: content(?).
+    lastEdited UTCTime Maybe
+
+    updatedAt UTCTime Maybe SafeToRemove -- Allowed fields: content(?).
 
 --------------------------------------------------------------------------------
 --#WallPost#
@@ -386,7 +390,7 @@ WallPost json
     likeCount Int
 
     createdAt UTCTime
-    updatedAt UTCTime Maybe -- Allowed fields: content(?).
+    updatedAt UTCTime Maybe SafeToRemove -- Allowed fields: content(?).
 
 --------------------------------------------------------------------------------
 

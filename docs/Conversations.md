@@ -22,3 +22,17 @@ The current implementation makes it so that any active member of a conversation
 can invite other people to it (we might want to make this friends-only?). This
 is a very simplistic system, and we can expand upon it in the future when we
 decide it is too simple.
+
+## You can create multiple conversations that include the same users.
+
+So, currently, you're able create multiple identical conversations with an
+identical set of recipients. We may want to create the more traditional behavior
+where any new conversation that includes the same set of users will get rolled
+into the existing conversation instead of creating a new one.
+
+That said, this free-er model does allow for some potentially desirable
+creations, and if we just imitated what texting already does perhaps we'd be
+missing an opportunity here?
+
+Until I get a word from Denis or Kevin on how we want conversations to behave,
+I'm going to leave it as it is right now.

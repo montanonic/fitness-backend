@@ -22,3 +22,4 @@ postConversationContentsR cid = do
     you <- requireAuthId
     now <- liftIO getCurrentTime
     runDB $ addMessage now cid you msg
+    sendResponse ("Message created." :: Text)

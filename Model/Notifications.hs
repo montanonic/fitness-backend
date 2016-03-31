@@ -1,9 +1,10 @@
 module Model.Notifications
-    ( 
+    (
     ) where
 -- | NOTE: Notifications are currently low-priority, given the need to integrate
 -- the system with AWS. Efforts will be focused on creating server functionality
 -- for all data structures, and handling Notifications at a later point in time.
+{-
 import Import
 
 import Model.Persistent (NotificationType(..))
@@ -39,3 +40,5 @@ ignoreFriendshipNotification = error "ignoreFriendshipNotification\
 friendRequestWasAccepted :: UTCTime -> UserId -> UserId -> DB ()
 friendRequestWasAccepted now madeReq acceptedReq = error
     "friendRequestWasAccepted is unimplemented"
+
+-}

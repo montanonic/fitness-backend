@@ -31,7 +31,8 @@ data App = App
 -- Note that this is really half the story; in Application.hs, mkYesodDispatch
 -- generates the rest of the code. Please see the following documentation
 -- for an explanation for this split:
--- http://www.yesodweb.com/book/scaffolding-and-the-site-template#scaffolding-and-the-site-template_foundation_and_application_modules
+-- http://www.yesodweb.com/book/scaffolding-and-the-site-template#scaffolding
+-- -and-the-site-template_foundation_and_application_modules
 --
 -- This function also generates the following type synonyms:
 -- type Handler = HandlerT App IO
@@ -57,12 +58,16 @@ instance Yesod App where
         120    -- timeout in minutes
         "config/client_session_key.aes"
 
-    -- Yesod Middleware allows you to run code before and after each handler function.
-    -- The defaultYesodMiddleware adds the response header "Vary: Accept, Accept-Language" and performs authorization checks.
-    -- Some users may also want to add the defaultCsrfMiddleware, which:
+    -- Yesod Middleware allows you to run code before and after each handler
+    -- function. The defaultYesodMiddleware adds the response header "Vary:
+    -- Accept, Accept-Language" and performs authorization checks. Some users
+    -- may also want to add the defaultCsrfMiddleware, which:
     --   a) Sets a cookie with a CSRF token in it.
-    --   b) Validates that incoming write requests include that token in either a header or POST parameter.
-    -- For details, see the CSRF documentation in the Yesod.Core.Handler module of the yesod-core package.
+    --   b) Validates that incoming write requests include that token in either
+    --      a header or POST parameter.
+    --
+    -- For details, see the CSRF documentation in the Yesod.Core.Handler module
+    -- of the yesod-core package.
     yesodMiddleware = defaultYesodMiddleware
 
     defaultLayout widget = do
@@ -128,7 +133,11 @@ instance Yesod App where
     -- we must definitely tie in authentication to the same stage as user
     -- creation, otherwise malicious clients could spam our database by creating
     -- new users.
-    isAuthorized UserR True = return Authorized -- this should be changed
+    isAuthorized UserR True = return Authorized -- #TODO: this should be changed
+        -- to require some form of authentication first, or something with a
+        -- similar effect. The issue is that we don't want people spam-creating
+        -- accounts, but perhaps modifying that within the authorization code
+        -- won't actually be the best way to handle this.
 
     isAuthorized (BrowseProfileR _) _ = return Authorized -- #TODO: update this
         -- route block access according to the queried user's privacy settings.
@@ -139,15 +148,27 @@ instance Yesod App where
         -- information private. Hence, this function should fail when accessing
         -- UserId's whose privacy settings prevent the queryer from seeing those
         -- relationships.
-    isAuthorized (CreateFriendRequestR _) _ = return Authorized
-    isAuthorized (CancelFriendRequestR _) _ = return Authorized
-    isAuthorized (AcceptFriendRequestR _) _ = return Authorized
+    isAuthorized (DefriendR _)            _ = isLoggedIn
+    isAuthorized (CreateFriendRequestR _) _ = isLoggedIn
+    isAuthorized (CancelFriendRequestR _) _ = isLoggedIn
+    isAuthorized (AcceptFriendRequestR _) _ = isLoggedIn
 
 
-    -- consider checking to make sure that a user is an active participant of
-    -- a conversation in order to view it. Instead of relying on Model code
-    -- to throw an exception in that case, it makes more sense to move a check
-    -- like that to the Authorization layer.
+    -- #NOTE: consider checking to make sure that a user is an active
+    -- participant of a conversation in order to view it. Instead of relying on
+    -- Model code to throw an exception in that case, it may make more sense to
+    -- move a check like that to the Authorization layer.
+    --
+    -- On the flipside, if we consider accessing a conversation to be an
+    -- inherently private affair, only granted to those who are members of it,
+    -- it may make just as much sense to force that every call of such a
+    -- function requires that they be a member of it. This is honeslty a very
+    -- mixed case right now, and it's not important enough to need to decide
+    -- either way on just yet. For now, the Model code will retain the checks.
+
+    -- The catch-all auth code is to make sure that the calling user is logged
+    -- in, which is currently all that is really required to use any of these
+    -- handlers.
     --isAuthorized (ConversationsR cid) _
     --isAuthorized (ConversationContentsR cid) _
     --isAuthorized (ConversationAddUserR cid) _
@@ -198,7 +219,8 @@ instance YesodAuth App where
         x <- getBy $ UniqueUser $ credsIdent creds
         case x of
             Just (Entity uid _) -> return $ Authenticated uid
-            Nothing -> return $ UserError $ IdentifierNotFound (credsIdent creds)
+            Nothing ->
+                return $ UserError $ IdentifierNotFound (credsIdent creds)
 
     -- You can add other plugins like Google Email, email or OAuth here
     authPlugins _ = [authDummy]
@@ -214,7 +236,9 @@ instance RenderMessage App FormMessage where
 
 -- Useful when writing code that is re-usable outside of the Handler context.
 -- An example is background jobs that send email.
--- This can also be useful for writing code that works across multiple Yesod applications.
+--
+-- This can also be useful for writing code that works across multiple Yesod
+-- applications.
 instance HasHttpManager App where
     getHttpManager = appHttpManager
 
